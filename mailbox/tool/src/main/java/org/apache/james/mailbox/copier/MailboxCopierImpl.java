@@ -31,10 +31,11 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.streaming.InputStreamContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,11 +75,10 @@ public class MailboxCopierImpl implements MailboxCopier {
         MailboxSession srcMailboxSession;
         MailboxSession dstMailboxSession;
 
-        List<MailboxPath> mailboxPathList = null;
 
         srcMailboxSession = srcMailboxManager.createSystemSession("manager", log);
         srcMailboxManager.startProcessingRequest(srcMailboxSession);
-        mailboxPathList = srcMailboxManager.list(srcMailboxSession);
+        List<MailboxName> mailboxPathList = srcMailboxManager.list(srcMailboxSession);
         srcMailboxManager.endProcessingRequest(srcMailboxSession);
 
         log.info("Found " + mailboxPathList.size() + " mailboxes in source mailbox manager.");
@@ -86,64 +86,55 @@ public class MailboxCopierImpl implements MailboxCopier {
             log.info("Mailbox#" + i + " path=" + mailboxPathList.get(i));
         }
 
-        MailboxPath mailboxPath = null;
-        
-        for (int i=0; i < mailboxPathList.size(); i++) {
-        
-            mailboxPath = mailboxPathList.get(i);
-            
-            if ((mailboxPath.getName() != null) && (mailboxPath.getName().trim().length() > 0)) {
-                
-                log.info("Ready to copy source mailbox path=" + mailboxPath.toString());
+        int i = 0;
+        for (MailboxName mailboxPath : mailboxPathList) {
 
-                srcMailboxSession = srcMailboxManager.createSystemSession(mailboxPath.getUser(), log);
-                dstMailboxSession = dstMailboxManager.createSystemSession(mailboxPath.getUser(), log);
+            log.info("Ready to copy source mailbox path=" + mailboxPath.toString());
 
-                dstMailboxManager.startProcessingRequest(dstMailboxSession);
-                try {
-                    dstMailboxManager.createMailbox(mailboxPath, dstMailboxSession);
-                    log.info("Destination mailbox " + i + "/" + mailboxPathList.size() 
-                            + " created with path=" + mailboxPath.toString()
-                            + " after " + (Calendar.getInstance().getTimeInMillis() - start.getTimeInMillis()) + " ms.");
-                } catch (MailboxExistsException e) {
-                    log.error("Mailbox " + i + " with path=" + mailboxPath.toString() + " already exists.", e);
-                }
-                dstMailboxManager.endProcessingRequest(dstMailboxSession);
-
-                srcMailboxManager.startProcessingRequest(srcMailboxSession);
-                MessageManager srcMessageManager = srcMailboxManager.getMailbox(mailboxPath, srcMailboxSession);
-                srcMailboxManager.endProcessingRequest(srcMailboxSession);
-
-                dstMailboxManager.startProcessingRequest(dstMailboxSession);
-                MessageManager dstMessageManager = dstMailboxManager.getMailbox(mailboxPath, dstMailboxSession);
-
-                int j=0;
-                Iterator<MessageResult> messageResultIterator = srcMessageManager.getMessages(MessageRange.all(), GROUP, srcMailboxSession);
-                
-                while (messageResultIterator.hasNext()) {
-
-                    MessageResult messageResult = messageResultIterator.next();
-                    InputStreamContent content = (InputStreamContent) messageResult.getFullContent();
-
-                    dstMailboxManager.startProcessingRequest(dstMailboxSession);
-                    dstMessageManager.appendMessage(content.getInputStream(), messageResult.getInternalDate(), dstMailboxSession, messageResult.getFlags().contains(Flag.RECENT), messageResult.getFlags());
-                    dstMailboxManager.endProcessingRequest(dstMailboxSession);
-                    log.info("Message #" + j + " appended in destination mailbox with path=" + mailboxPath.toString());
-                    j++;
-
-                }
-                dstMailboxManager.endProcessingRequest(dstMailboxSession);
-
+            MailboxOwner owner = srcMailboxManager.getMailboxNameResolver().getOwner(mailboxPath);
+            if (owner.isGroup()) {
+                //TODO: owners may be also groups. creating the system session for a group may be obscure.
+                throw new IllegalStateException();
             }
-            
-            else {
-                
+            //TODO: Why two different system sessions here?
+            srcMailboxSession = srcMailboxManager.createSystemSession(owner.getName(), log);
+            dstMailboxSession = dstMailboxManager.createSystemSession(owner.getName(), log);
+
+            dstMailboxManager.startProcessingRequest(dstMailboxSession);
+            try {
+                dstMailboxManager.createMailbox(mailboxPath, dstMailboxSession);
                 log.info("Destination mailbox " + i + "/" + mailboxPathList.size() 
-                        + " with path=" + mailboxPath.toString()
-                        + " has a null or empty name");
+                        + " created with path=" + mailboxPath.toString()
+                        + " after " + (Calendar.getInstance().getTimeInMillis() - start.getTimeInMillis()) + " ms.");
+            } catch (MailboxExistsException e) {
+                log.error("Mailbox " + i + " with path=" + mailboxPath.toString() + " already exists.", e);
+            }
+            dstMailboxManager.endProcessingRequest(dstMailboxSession);
+
+            srcMailboxManager.startProcessingRequest(srcMailboxSession);
+            MessageManager srcMessageManager = srcMailboxManager.getMailbox(mailboxPath, srcMailboxSession);
+            srcMailboxManager.endProcessingRequest(srcMailboxSession);
+
+            dstMailboxManager.startProcessingRequest(dstMailboxSession);
+            MessageManager dstMessageManager = dstMailboxManager.getMailbox(mailboxPath, dstMailboxSession);
+
+            int j=0;
+            Iterator<MessageResult> messageResultIterator = srcMessageManager.getMessages(MessageRange.all(), GROUP, srcMailboxSession);
+            
+            while (messageResultIterator.hasNext()) {
+
+                MessageResult messageResult = messageResultIterator.next();
+                InputStreamContent content = (InputStreamContent) messageResult.getFullContent();
+
+                dstMailboxManager.startProcessingRequest(dstMailboxSession);
+                dstMessageManager.appendMessage(content.getInputStream(), messageResult.getInternalDate(), dstMailboxSession, messageResult.getFlags().contains(Flag.RECENT), messageResult.getFlags());
+                dstMailboxManager.endProcessingRequest(dstMailboxSession);
+                log.info("Message #" + j + " appended in destination mailbox with path=" + mailboxPath.toString());
+                j++;
 
             }
-
+            dstMailboxManager.endProcessingRequest(dstMailboxSession);
+            i++;
         }
 
         log.info("Mailboxes copied in " + (Calendar.getInstance().getTimeInMillis() - start.getTimeInMillis()) + " ms.");

@@ -20,6 +20,7 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * GETACL Request.
@@ -27,14 +28,14 @@ import org.apache.james.imap.api.ImapCommand;
  * @author Peter Palaga
  */
 public class GetACLRequest extends AbstractImapRequest {
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
 
-    public GetACLRequest(String tag, ImapCommand command, String mailboxName) {
+    public GetACLRequest(String tag, ImapCommand command, UnresolvedMailboxName mailboxName) {
         super(tag, command);
         this.mailboxName = mailboxName;
     }
 
-    public String getMailboxName() {
+    public UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 

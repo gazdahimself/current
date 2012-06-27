@@ -35,8 +35,8 @@
     <module>mailbox</module>
     <module>mailbox-integration-tester</module>
     <module>protocols</module>
-    <module>imap</module>
-    <module>hupa</module>
+<!--     <module>imap</module> -->
+<!--     <module>hupa</module> -->
     <module>jdkim</module>
     <module>jspf</module>
     <module>mpt</module>

@@ -19,12 +19,13 @@
 
 package org.apache.james.imap.processor;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapSessionUtils;
-import org.apache.james.imap.api.display.CharsetUtil;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
@@ -36,9 +37,10 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
 
@@ -46,47 +48,44 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
         super(LsubRequest.class, next, mailboxManager, subscriptionManager, factory);
     }
 
-    private void listSubscriptions(ImapSession session, Responder responder, final String referenceName, final String mailboxName) throws SubscriptionException, MailboxException {
+    private void listSubscriptions(ImapSession session, Responder responder, final UnresolvedMailboxName referenceName, final UnresolvedMailboxName mailboxName) throws SubscriptionException, MailboxException {
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final Collection<String> mailboxes = getSubscriptionManager().subscriptions(mailboxSession);
-        // If the mailboxName is fully qualified, ignore the reference name.
-        String finalReferencename = referenceName;
-
-        if (mailboxName.charAt(0) == MailboxConstants.NAMESPACE_PREFIX_CHAR) {
-            finalReferencename = "";
+        
+        MailboxNameResolver mailboxNameResolver = mailboxSession.getMailboxNameResolver();
+        String currentUser = mailboxSession.getUser().getUserName();
+        MailboxName qRef = mailboxNameResolver.resolve(referenceName, currentUser);
+        MailboxName qPattern = mailboxNameResolver.resolve(mailboxName, currentUser);
+        
+        MailboxQuery mailboxQuery = new MailboxQuery(qRef, qPattern);
+        final Collection<MailboxName> mailboxes = getSubscriptionManager().subscriptions(mailboxSession);
+        
+        final Map<MailboxName, Boolean> results = new TreeMap<MailboxName, Boolean>(mailboxNameResolver.getContextualizedComparator(currentUser));
+        
+        MailboxName resolvedPattern = mailboxQuery.getResolvedExpression();
+        boolean endsWithLocalWildcard = false;
+        if (resolvedPattern.getSegmentCount() > 0) {
+            String lastSegment = resolvedPattern.getSegmentAt(resolvedPattern.getSegmentCount() - 1);
+            endsWithLocalWildcard = MailboxQuery.LOCALWILDCARD_STRING.equals(lastSegment);
         }
-
-        // Is the interpreted (combined) pattern relative?
-        boolean isRelative = ((finalReferencename + mailboxName).charAt(0) != MailboxConstants.NAMESPACE_PREFIX_CHAR);
-        MailboxPath basePath = null;
-        if (isRelative) {
-            basePath = new MailboxPath(MailboxConstants.USER_NAMESPACE, mailboxSession.getUser().getUserName(), CharsetUtil.decodeModifiedUTF7(finalReferencename));
-        } else {
-            basePath = buildFullPath(session, CharsetUtil.decodeModifiedUTF7(finalReferencename));
-        }
-
-        final MailboxQuery expression = new MailboxQuery(basePath, CharsetUtil.decodeModifiedUTF7(mailboxName), mailboxSession.getPathDelimiter());
-        final Collection<String> mailboxResponses = new ArrayList<String>();
-        for (final String mailbox : mailboxes) {
-            respond(responder, expression, mailbox, true, mailboxes, mailboxResponses, mailboxSession.getPathDelimiter());
-        }
-    }
-
-    private void respond(Responder responder, final MailboxQuery expression, final String mailboxName, final boolean originalSubscription, final Collection<String> mailboxes, final Collection<String> mailboxResponses, final char delimiter) {
-        if (expression.isExpressionMatch(mailboxName)) {
-            if (!mailboxResponses.contains(mailboxName)) {
-                final LSubResponse response = new LSubResponse(mailboxName, !originalSubscription, delimiter);
-                responder.respond(response);
-                mailboxResponses.add(mailboxName);
+        char delimiter = session.getMailboxNameCodec().getDelimiter();
+        for (final MailboxName mailbox : mailboxes) {
+            if (mailboxQuery.isExpressionMatch(mailbox)) {
+                results.put(mailbox, Boolean.FALSE);
             }
-        } else {
-            final int lastDelimiter = mailboxName.lastIndexOf(delimiter);
-            if (lastDelimiter > 0) {
-                final String parentMailbox = mailboxName.substring(0, lastDelimiter);
-                if (!mailboxes.contains(parentMailbox)) {
-                    respond(responder, expression, parentMailbox, false, mailboxes, mailboxResponses, delimiter);
+            else if (endsWithLocalWildcard) {
+                MailboxName currentMailbox = mailbox.getParent();
+                while (currentMailbox != null) {
+                    if (!results.containsKey(currentMailbox) && mailboxQuery.isExpressionMatch(currentMailbox)) {
+                        results.put(currentMailbox, Boolean.TRUE);
+                    }
+                    currentMailbox = currentMailbox.getParent();
                 }
             }
+        }
+        for (Entry<MailboxName, Boolean> result : results.entrySet()) {
+            UnresolvedMailboxName uqName = mailboxNameResolver.unresolve(result.getKey(), currentUser);
+            final LSubResponse response = new LSubResponse(uqName, result.getValue().booleanValue(), delimiter);
+            responder.respond(response);
         }
     }
 
@@ -98,7 +97,7 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
      *            IMAP reference name, possibly null
      */
     private void respondWithHierarchyDelimiter(final Responder responder, final char delimiter) {
-        final LSubResponse response = new LSubResponse("", true, delimiter);
+        final LSubResponse response = new LSubResponse(UnresolvedMailboxName.EMPTY, true, delimiter);
         responder.respond(response);
     }
 
@@ -110,13 +109,12 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcessRequest(LsubRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final String referenceName = request.getBaseReferenceName();
-        final String mailboxPattern = request.getMailboxPattern();
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final UnresolvedMailboxName referenceName = request.getBaseReferenceName();
+        final UnresolvedMailboxName mailboxPattern = request.getMailboxPattern();
 
         try {
-            if (mailboxPattern.length() == 0) {
-                respondWithHierarchyDelimiter(responder, mailboxSession.getPathDelimiter());
+            if (mailboxPattern.isEmpty()) {
+                respondWithHierarchyDelimiter(responder, session.getMailboxNameCodec().getDelimiter());
             } else {
                 listSubscriptions(session, responder, referenceName, mailboxPattern);
             }

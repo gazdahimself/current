@@ -25,6 +25,7 @@ import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.decode.ImapRequestLineReader;
 import org.apache.james.imap.message.request.CopyRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.apache.james.protocols.imap.DecodingException;
 
 /**
@@ -44,7 +45,7 @@ public class CopyCommandParser extends AbstractUidCommandParser {
      */
     protected ImapMessage decode(ImapCommand command, ImapRequestLineReader request, String tag, boolean useUids, ImapSession session) throws DecodingException {
         IdRange[] idSet = request.parseIdRange(session);
-        String mailboxName = request.mailbox();
+        UnresolvedMailboxName mailboxName = session.getMailboxNameCodec().decode(request.astring());
         request.eol();
         final ImapMessage result = new CopyRequest(command, idSet, mailboxName, useUids, tag);
         return result;

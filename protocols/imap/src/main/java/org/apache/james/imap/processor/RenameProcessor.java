@@ -20,7 +20,6 @@
 package org.apache.james.imap.processor;
 
 import org.apache.james.imap.api.ImapCommand;
-import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
@@ -32,7 +31,8 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 
 public class RenameProcessor extends AbstractMailboxProcessor<RenameRequest> {
 
@@ -49,14 +49,19 @@ public class RenameProcessor extends AbstractMailboxProcessor<RenameRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(RenameRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath existingPath = buildFullPath(session, request.getExistingName());
-        final MailboxPath newPath = buildFullPath(session, request.getNewName());
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final String currentUser = mailboxSession.getUser().getUserName();
+        final MailboxName existingPath = nameResolver.resolve(request.getExistingName(), currentUser);
+        final MailboxName newPath = nameResolver.resolve(request.getNewName(), currentUser);
         try {
             final MailboxManager mailboxManager = getMailboxManager();
             MailboxSession mailboxsession = ImapSessionUtils.getMailboxSession(session);
             mailboxManager.renameMailbox(existingPath, newPath, mailboxsession);
 
-            if (existingPath.getName().equalsIgnoreCase(ImapConstants.INBOX_NAME) && mailboxManager.mailboxExists(existingPath, mailboxsession) == false) {
+            MailboxName inbox = mailboxsession.getMailboxNameResolver().getInbox(mailboxsession.getOwner());
+
+            if (existingPath.equals(inbox) && !mailboxManager.mailboxExists(existingPath, mailboxsession)) {
                 mailboxManager.createMailbox(existingPath, mailboxsession);
             }
             okComplete(command, tag, responder);

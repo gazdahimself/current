@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.jcr;
 
+
 /**
  * Constants for JCR
  *
@@ -28,6 +29,25 @@ public interface JCRImapConstants {
 	/**
 	 * Delimiter for Nodes
 	 */
-	public static final String NODE_DELIMITER = "/";
+	String NODE_DELIMITER = "/";
+    char NODE_DELIMITER_CHAR = '/';
+    char NS_PREFIX_DELIMITER = ':';
+    
+    String JCR_ROOT = JCRUtils.fq("jcr", "root");
+    
+    String NS_PREFIX = "jamesMailbox";
+
+    String MAILBOX_TYPE = JCRUtils.fq(NS_PREFIX, "mailbox");
+    String MAILBOX_UID_VALIDITY_PROP = JCRUtils.fq(NS_PREFIX, "mailboxUidValidity");
+    String MAILBOX_NAME_PROP = JCRUtils.fq(NS_PREFIX, "mailboxName");
+    String MAILBOX_LAST_UID_PROP = JCRUtils.fq(NS_PREFIX, "mailboxLastUid");
+    String MAILBOX_OWNER_PROP = JCRUtils.fq(NS_PREFIX, "mailboxOwner");
+    String MAILBOX_OWNER_IS_GROUP_PROP = JCRUtils.fq(NS_PREFIX, "mailboxOwnerIsGroup");
+    String MAILBOX_HIGHEST_MOD_SEQ_PROP = JCRUtils.fq(NS_PREFIX, "mailboxHighestModSeq");
+
+    String USER_TYPE = JCRUtils.fq(NS_PREFIX, "user");
+    String SUBSCRIPTION_USER_PROP = JCRUtils.fq(NS_PREFIX, "user");
+    String SUBSCRIPTION_MAILBOXES_PROP =  JCRUtils.fq(NS_PREFIX, "subscriptionMailboxes");
+    String MAILBOXES_PATH = "mailboxes";
 
 }

@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox.model;
 
+
 /**
  * Constants which are used within the mailbox api and implementations
  * 
@@ -26,18 +27,14 @@ package org.apache.james.mailbox.model;
  */
 public interface MailboxConstants {
 
-    /**
-     * The char which is used to prefix a namespace
+    /** The name of the INBOX.
+     * Be aware that there is another "INBOX" constant in {@link org.apache.james.imap.api.ImapConstants#INBOX_NAME}.
      */
-    public static final char NAMESPACE_PREFIX_CHAR = '#';
-
-    /** The namespace used for store user inboxes */
-    public static final String USER_NAMESPACE = NAMESPACE_PREFIX_CHAR + "private";
-
-    /** The default delimiter used to seperated parent/child folders */
-    public static final char DEFAULT_DELIMITER = '.';
-
-    /** The name of the INBOX */
     public static final String INBOX = "INBOX";
+
+    /**
+     * Delimits the user part from the domain part in an email address. 
+     */
+    public static final char AT = '@';
 
 }

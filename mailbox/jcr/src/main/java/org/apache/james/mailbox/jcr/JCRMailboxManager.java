@@ -24,7 +24,8 @@ import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
@@ -52,12 +53,12 @@ public class JCRMailboxManager extends StoreMailboxManager<String> implements JC
     
     @Override
     protected StoreMessageManager<String> createMessageManager(Mailbox<String> mailboxEntity, MailboxSession session) throws MailboxException{
-        return new JCRMessageManager(getMapperFactory(), getMessageSearchIndex(), getEventDispatcher(), getLocker(), (JCRMailbox) mailboxEntity, getAclResolver(), getGroupMembershipResolver(), logger, getDelimiter());
+        return new JCRMessageManager(getMapperFactory(), getMessageSearchIndex(), getEventDispatcher(), getLocker(), (JCRMailbox) mailboxEntity, getAclResolver(), getGroupMembershipResolver(), logger);
     }
 
     @Override
-    protected Mailbox<String> doCreateMailbox(MailboxPath path, MailboxSession session) throws MailboxException {
-        return new org.apache.james.mailbox.jcr.mail.model.JCRMailbox(path, randomUidValidity(), logger);
+    protected Mailbox<String> doCreateMailbox(MailboxName path, MailboxOwner owner, MailboxSession session) throws MailboxException {
+        return new org.apache.james.mailbox.jcr.mail.model.JCRMailbox(path, owner.getName(), owner.isGroup(), randomUidValidity(), logger);
     }
 
 }

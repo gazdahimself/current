@@ -23,16 +23,18 @@ import java.util.List;
 
 import org.apache.james.mailbox.MailboxListener.FlagsUpdated;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.name.MailboxName;
 
 public class FakeMailboxListenerFlagsUpdate extends FlagsUpdated {
+
+    private static final long serialVersionUID = 4814678612056704790L;
 
     public List<Long> uids;
 
     public List<UpdatedFlags> flags;
 
-    public FakeMailboxListenerFlagsUpdate(MailboxSession session, List<Long> uids, List<UpdatedFlags> flags, MailboxPath path) {
+    public FakeMailboxListenerFlagsUpdate(MailboxSession session, List<Long> uids, List<UpdatedFlags> flags, MailboxName path) {
         super(session, path);
         this.uids = uids;
         this.flags = flags;

@@ -26,10 +26,12 @@ import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACLCodec;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 @Entity(name="Mailbox")
@@ -38,19 +40,11 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
     @NamedQuery(name="findMailboxById",
         query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.mailbox.mailboxId = :idParam"),
     @NamedQuery(name="findMailboxByName",
-        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.name = :nameParam and mailbox.user is NULL and mailbox.namespace= :namespaceParam"),
-    @NamedQuery(name="findMailboxByNameWithUser",
-        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.name = :nameParam and mailbox.user= :userParam and mailbox.namespace= :namespaceParam"),
+        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.mailboxNameValue = :nameParam"),
     @NamedQuery(name="deleteAllMailboxes",
         query="DELETE FROM Mailbox mailbox"),
-    @NamedQuery(name="findMailboxWithNameLikeWithUser",
-        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.name LIKE :nameParam and mailbox.user= :userParam and mailbox.namespace= :namespaceParam"),
     @NamedQuery(name="findMailboxWithNameLike",
-        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.name LIKE :nameParam and mailbox.user is NULL and mailbox.namespace= :namespaceParam"),
-    @NamedQuery(name="countMailboxesWithNameLikeWithUser",
-        query="SELECT COUNT(mailbox) FROM Mailbox mailbox WHERE mailbox.name LIKE :nameParam and mailbox.user= :userParam and mailbox.namespace= :namespaceParam"),
-    @NamedQuery(name="countMailboxesWithNameLike",
-        query="SELECT COUNT(mailbox) FROM Mailbox mailbox WHERE mailbox.name LIKE :nameParam and mailbox.user is NULL and mailbox.namespace= :namespaceParam"),
+        query="SELECT mailbox FROM Mailbox mailbox WHERE mailbox.mailboxNameValue LIKE :nameParam"),
     @NamedQuery(name="listMailboxes",
         query="SELECT mailbox FROM Mailbox mailbox"),
     @NamedQuery(name="findHighestModSeq",
@@ -68,24 +62,21 @@ public class JPAMailbox implements Mailbox<Long> {
     @Column(name = "MAILBOX_ID")
     private long mailboxId;
     
-    /** The value for the name field */
-    @Basic(optional = false)
-    @Column(name = "MAILBOX_NAME", nullable = false, length = 200)
-    private String name;
-
     /** The value for the uidValidity field */
     @Basic(optional = false)
     @Column(name = "MAILBOX_UID_VALIDITY", nullable = false)
     private long uidValidity;
 
     @Basic(optional = false)
+    @Column(name = "MAILBOX_NAME", nullable = false, length = 200)
+    private String mailboxNameValue;
+    @Transient
+    private MailboxNameCodec mailboxNameCodec;
+
+    @Basic(optional = false)
     @Column(name = "USER_NAME", nullable = false, length = 200)
     private String user;
     
-    @Basic(optional = false)
-    @Column(name = "MAILBOX_NAMESPACE", nullable = false, length = 200)
-    private String namespace;
-
     @Basic(optional = false)
     @Column(name = "MAILBOX_LAST_UID", nullable = false)
     private long lastUid;
@@ -93,6 +84,18 @@ public class JPAMailbox implements Mailbox<Long> {
     @Basic(optional = false)
     @Column(name = "MAILBOX_HIGHEST_MODSEQ", nullable = false)
     private long highestModSeq;
+
+    @Basic(optional = false)
+    @Column(name = "MAILBOX_OWNER_IS_GROUP", nullable = false)
+    private boolean ownerGroup;
+
+
+    @Basic(optional = true)
+    @Column(name = "MAILBOX_ACL", nullable = true, length = 200)
+    private String aclValue;
+    @Transient
+    private MailboxACLCodec mailboxACLCodec;
+
     
     /**
      * JPA only
@@ -102,12 +105,14 @@ public class JPAMailbox implements Mailbox<Long> {
         super();
     }
     
-    public JPAMailbox(MailboxPath path, int uidValidity) {
+    public JPAMailbox(MailboxName mailboxName, MailboxNameCodec mailboxNameCodec, String user, boolean ownerGroup, int uidValidity, MailboxACLCodec mailboxACLCodec) {
         this();
-        this.name = path.getName();
-        this.user = path.getUser();
-        this.namespace = path.getNamespace();
+        this.mailboxNameCodec = mailboxNameCodec;
+        this.mailboxNameValue = mailboxNameCodec.encode(mailboxName);
+        this.user = user;
+        this.ownerGroup = ownerGroup;
         this.uidValidity = uidValidity;
+        this.mailboxACLCodec = mailboxACLCodec;
     }
 
     /**
@@ -118,31 +123,45 @@ public class JPAMailbox implements Mailbox<Long> {
     }
 
     /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getName()
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getUidValidity()
      */
     public long getUidValidity() {
         return uidValidity;
     }
     
+    @Override
+    public MailboxName getMailboxName() {
+        return mailboxNameCodec.decode(getMailboxNameValue(), true);
+    }
+
+    public void setMailboxName(MailboxName mailboxName) {
+        setMailboxNameValue(mailboxNameCodec.encode(mailboxName));
+    }
+
+    /**
+     */
+    public String getMailboxNameValue() {
+        return this.mailboxNameValue;
+    }
+    
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#setName(java.lang.String)
      */
-    public void setName(String name) {
-        this.name = name;
+    public void setMailboxNameValue(String name) {
+        this.mailboxNameValue = name;
     }
-
+    
+    public void setMailboxNameCodec(MailboxNameCodec mailboxNameCodec) {
+        this.mailboxNameCodec = mailboxNameCodec;
+    }
+    
     @Override
     public String toString() {
         final String retValue = "Mailbox ( "
             + "mailboxId = " + this.mailboxId + TAB
-            + "name = " + this.name + TAB
+            + "mailboxName = " + this.mailboxNameValue + TAB
+            + "user = " + this.user + TAB
+            + "ownerGroup = " + this.ownerGroup + TAB
             + "uidValidity = " + this.uidValidity + TAB
             + " )";
         return retValue;
@@ -171,24 +190,10 @@ public class JPAMailbox implements Mailbox<Long> {
     }
 
     /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getNamespace()
-     */
-    public String getNamespace() {
-        return namespace;
-    }
-
-    /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getUser()
      */
     public String getUser() {
         return user;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setNamespace(java.lang.String)
-     */
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
     }
 
     /**
@@ -197,8 +202,15 @@ public class JPAMailbox implements Mailbox<Long> {
     public void setUser(String user) {
         this.user = user;
     }
-
     
+    public boolean isOwnerGroup() {
+        return ownerGroup;
+    }
+
+    public void setOwnerGroup(boolean ownerGroup) {
+        this.ownerGroup = ownerGroup;
+    }
+
     public long getLastUid() {
         return lastUid;
     }
@@ -220,8 +232,7 @@ public class JPAMailbox implements Mailbox<Long> {
      */
     @Override
     public MailboxACL getACL() {
-        // TODO ACL support
-        return SimpleMailboxACL.OWNER_FULL_ACL;
+        return mailboxACLCodec.decode(getAclValue());
     }
 
     /* (non-Javadoc)
@@ -229,7 +240,19 @@ public class JPAMailbox implements Mailbox<Long> {
      */
     @Override
     public void setACL(MailboxACL acl) {
-        // TODO ACL support
+        setAclValue(mailboxACLCodec.encode(acl));
+    }
+
+    public String getAclValue() {
+        return aclValue;
+    }
+
+    public void setAclValue(String aclValue) {
+        this.aclValue = aclValue;
     }
     
+    public void setMailboxACLCodec(MailboxACLCodec mailboxACLCodec) {
+        this.mailboxACLCodec = mailboxACLCodec;
+    }
+
 }

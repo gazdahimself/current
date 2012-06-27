@@ -25,6 +25,9 @@ import com.netflix.curator.retry.RetryOneTime;
 import com.netflix.curator.test.TestingServer;
 import java.util.UUID;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.MailboxNameResolver;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.After;
 import static org.junit.Assert.*;
@@ -35,6 +38,9 @@ import org.junit.Test;
  * Test for UID provider.
  */
 public class ZooUidProviderTest {
+    
+    private static final String USER = "namespaceuser";
+    private static final MailboxNameResolver MAILBOX_NAME_RESOLVER = DefaultMailboxNameResolver.INSTANCE;
 
     private static TestingServer testServer;
     private static final int ZOO_TEST_PORT = 3123;
@@ -54,11 +60,14 @@ public class ZooUidProviderTest {
         client.start();
         uuidProvider = new ZooUidProvider<UUID>(client, retryPolicy);
         longProvider = new ZooUidProvider<Long>(client, retryPolicy);
-        MailboxPath path1 = new MailboxPath("namespacetest", "namespaceuser", "UUID");
-        MailboxPath path2 = new MailboxPath("namespacetest", "namespaceuser", "Long");
-        mailboxUUID = new SimpleMailbox<UUID>(path1, 1L);
+        
+        MailboxName inbox = MAILBOX_NAME_RESOLVER.getInbox(USER);
+        
+        MailboxName path1 = inbox.child("UUID");
+        MailboxName path2 = inbox.child("Long");
+        mailboxUUID = new SimpleMailbox<UUID>(path1, USER, false, 1L);
         mailboxUUID.setMailboxId(randomUUID);
-        mailboxLong = new SimpleMailbox<Long>(path2, 2L);
+        mailboxLong = new SimpleMailbox<Long>(path2, USER, false, 2L);
         mailboxLong.setMailboxId(123L);
     }
 

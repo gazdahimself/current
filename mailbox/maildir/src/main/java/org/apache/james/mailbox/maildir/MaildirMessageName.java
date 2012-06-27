@@ -194,7 +194,7 @@ public class MaildirMessageName {
             return file;
         else
             throw new FileNotFoundException("There is no file for message name " + fullName
-                    + " in mailbox " + parentFolder.getRootFile().getAbsolutePath());
+                    + " in mailbox " + parentFolder.getPath().getAbsolutePath());
     }
     
     /**

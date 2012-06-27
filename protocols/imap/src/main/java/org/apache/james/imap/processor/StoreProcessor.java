@@ -281,7 +281,7 @@ public class StoreProcessor extends AbstractMailboxProcessor<StoreRequest> {
 
                 if (msn == SelectedMailbox.NO_SUCH_MESSAGE) {
                     if(session.getLog().isDebugEnabled()) {
-                        session.getLog().debug("No message found with uid " + uid + " in the uid<->msn mapping for mailbox " + selected.getPath().getFullName(mailboxSession.getPathDelimiter()) +" , this may be because it was deleted by a concurrent session. So skip it..");
+                        session.getLog().debug("No message found with uid " + uid + " in the uid<->msn mapping for mailbox " + selected.getPath() +" , this may be because it was deleted by a concurrent session. So skip it..");
                         
                     }
                     // skip this as it was not found in the mapping

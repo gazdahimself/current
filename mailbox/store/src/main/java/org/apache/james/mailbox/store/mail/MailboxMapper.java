@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.transaction.Mapper;
 
@@ -58,7 +58,7 @@ public interface MailboxMapper<Id> extends Mapper {
      * @throws MailboxException
      * @throws MailboxNotFoundException
      */
-    Mailbox<Id> findMailboxByPath(MailboxPath mailboxName)
+    Mailbox<Id> findMailboxByPath(MailboxName mailboxName)
             throws MailboxException, MailboxNotFoundException;
 
     /**
@@ -68,7 +68,7 @@ public interface MailboxMapper<Id> extends Mapper {
      * @return mailboxList
      * @throws MailboxException
      */
-    List<Mailbox<Id>> findMailboxWithPathLike(MailboxPath mailboxPath)
+    List<Mailbox<Id>> findMailboxWithPathLike(MailboxName mailboxPath)
             throws MailboxException;
 
     /**
@@ -80,11 +80,11 @@ public interface MailboxMapper<Id> extends Mapper {
      * @throws MailboxException
      * @throws MailboxNotFoundException
      */
-    boolean hasChildren(Mailbox<Id> mailbox, char delimiter)
+    boolean hasChildren(Mailbox<Id> mailbox)
             throws MailboxException, MailboxNotFoundException;
     
     /**
-     * Return a unmodifable {@link List} of all {@link Mailbox} 
+     * Return a unmodifable {@link List} of all {@link Mailbox}es.
      * 
      * @return mailboxList
      * @throws MailboxException 

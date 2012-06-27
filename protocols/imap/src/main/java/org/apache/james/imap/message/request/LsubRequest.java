@@ -19,23 +19,24 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 public class LsubRequest extends AbstractImapRequest {
-    private final String baseReferenceName;
+    private final UnresolvedMailboxName baseReferenceName;
 
-    private final String mailboxPattern;
+    private final UnresolvedMailboxName mailboxPattern;
 
-    public LsubRequest(final ImapCommand command, final String referenceName, final String mailboxPattern, final String tag) {
+    public LsubRequest(final ImapCommand command, final UnresolvedMailboxName referenceName, final UnresolvedMailboxName mailboxPattern, final String tag) {
         super(tag, command);
         this.baseReferenceName = referenceName;
         this.mailboxPattern = mailboxPattern;
     }
 
-    public final String getBaseReferenceName() {
+    public final UnresolvedMailboxName getBaseReferenceName() {
         return baseReferenceName;
     }
 
-    public final String getMailboxPattern() {
+    public final UnresolvedMailboxName getMailboxPattern() {
         return mailboxPattern;
     }
 }

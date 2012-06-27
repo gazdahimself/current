@@ -24,6 +24,9 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.name.codec.DefaultMailboxNameCodec;
+import org.apache.james.mailbox.name.codec.LikeSearchPatternEscaper;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 
 /**
@@ -34,9 +37,14 @@ public abstract class JPATransactionalMapper extends TransactionalMapper {
 
     protected EntityManagerFactory entityManagerFactory;
     protected EntityManager entityManager;
+    protected final MailboxNameCodec mailboxNameCodec;
+
+    protected final MailboxNameCodec mailboxNamePatternCodec;
     
-    public JPATransactionalMapper(final EntityManagerFactory entityManagerFactory) {
+    public JPATransactionalMapper(final EntityManagerFactory entityManagerFactory, MailboxNameCodec mailboxNameCodec) {
         this.entityManagerFactory = entityManagerFactory;
+        this.mailboxNameCodec = mailboxNameCodec;
+        this.mailboxNamePatternCodec = new DefaultMailboxNameCodec(new LikeSearchPatternEscaper(mailboxNameCodec.getDelimiter(), LikeSearchPatternEscaper.SQL_UNIVERSAL_WILDCARD)); 
     }
 
     /**
@@ -45,9 +53,9 @@ public abstract class JPATransactionalMapper extends TransactionalMapper {
      * @return entitymanger
      */
     public EntityManager getEntityManager() {
-        if (entityManager != null)
-            return entityManager;
-        entityManager = entityManagerFactory.createEntityManager();
+        if (entityManager == null) {
+            entityManager = entityManagerFactory.createEntityManager();
+        }
         return entityManager;
     }
 
@@ -89,11 +97,15 @@ public abstract class JPATransactionalMapper extends TransactionalMapper {
      */
     public void endRequest() {
         if (entityManager != null) {
-            if (entityManager.isOpen())
+            if (entityManager.isOpen()) {
                 entityManager.close();
+            }
             entityManager = null;
         }
     }
-
     
+    public MailboxNameCodec getMailboxNameCodec() {
+        return mailboxNameCodec;
+    }
+
 }

@@ -21,6 +21,7 @@ package org.apache.james.mailbox;
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 
@@ -29,8 +30,8 @@ import junit.framework.Assert;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxManager;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -57,14 +58,14 @@ public abstract class AbstractMailboxManagerTest {
     @Test
     public void testBasicOperations() throws BadCredentialsException, MailboxException, UnsupportedEncodingException {
 
-        setMailboxManager(new MockMailboxManager(getMailboxManager()).getMockMailboxManager());
+        setMailboxManager(new MockMailboxManager(getMailboxManager(), true, true).getMockMailboxManager());
         
         MailboxSession session = getMailboxManager().createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
         Assert.assertEquals(USER_1, session.getUser().getUserName());
-        
         getMailboxManager().startProcessingRequest(session);
         
-        MailboxPath inbox = MailboxPath.inbox(session);
+        MailboxNameResolver nameResolver = session.getMailboxNameResolver();
+        MailboxName inbox = nameResolver.getInbox(session.getOwner());
         Assert.assertFalse(getMailboxManager().mailboxExists(inbox, session));
         
         getMailboxManager().createMailbox(inbox, session);
@@ -77,7 +78,7 @@ public abstract class AbstractMailboxManagerTest {
             // mailbox already exists!
         }
         
-        MailboxPath inboxSubMailbox = new MailboxPath(inbox, "INBOX.Test");
+        MailboxName inboxSubMailbox = inbox.child("Test");
         Assert.assertFalse(getMailboxManager().mailboxExists(inboxSubMailbox, session));
         
         getMailboxManager().createMailbox(inboxSubMailbox, session);
@@ -107,11 +108,13 @@ public abstract class AbstractMailboxManagerTest {
     @Test
     public void testList() throws MailboxException, UnsupportedEncodingException {
 
-        setMailboxManager(new MockMailboxManager(getMailboxManager()).getMockMailboxManager());
+        MockMailboxManager mmm = new MockMailboxManager(getMailboxManager(), true, true);
+        setMailboxManager(mmm.getMockMailboxManager());
 
         MailboxSession mailboxSession = getMailboxManager().createSystemSession("manager", LoggerFactory.getLogger("testList"));
         getMailboxManager().startProcessingRequest(mailboxSession);
-        Assert.assertEquals(MockMailboxManager.EXPECTED_MAILBOXES_COUNT, getMailboxManager().list(mailboxSession).size());
+        List<MailboxName> found = getMailboxManager().list(mailboxSession);
+        Assert.assertEquals(mmm.getMailboxCount(), found.size());
 
     }
     
@@ -120,10 +123,12 @@ public abstract class AbstractMailboxManagerTest {
     public void testCreateSubFolderDirectly() throws BadCredentialsException, MailboxException { 
 
         MailboxSession session = getMailboxManager().createSystemSession(USER_2, LoggerFactory.getLogger("Test"));
-        getMailboxManager().createMailbox(new MailboxPath(MailboxConstants.USER_NAMESPACE, USER_2, "Trash"), session);
-        getMailboxManager().createMailbox(new MailboxPath(MailboxConstants.USER_NAMESPACE, USER_2, "INBOX.testfolder"), session);
+        MailboxNameResolver nameResolver = session.getMailboxNameResolver();
+        MailboxName inbox = nameResolver.getInbox(session.getOwner());
+
+        getMailboxManager().createMailbox(inbox.child("testfolder"), session);
         
-        getMailboxManager().getMailbox(MailboxPath.inbox(session), session).appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), session, false, new Flags());
+        getMailboxManager().getMailbox(inbox, session).appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), session, false, new Flags());
 
     }
 

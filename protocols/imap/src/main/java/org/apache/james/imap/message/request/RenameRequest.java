@@ -19,23 +19,24 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 public class RenameRequest extends AbstractImapRequest {
-    private final String existingName;
+    private final UnresolvedMailboxName existingName;
 
-    private final String newName;
+    private final UnresolvedMailboxName newName;
 
-    public RenameRequest(final ImapCommand command, final String existingName, final String newName, final String tag) {
+    public RenameRequest(final ImapCommand command, final UnresolvedMailboxName existingName, final UnresolvedMailboxName newName, final String tag) {
         super(tag, command);
         this.existingName = existingName;
         this.newName = newName;
     }
 
-    public final String getExistingName() {
+    public final UnresolvedMailboxName getExistingName() {
         return existingName;
     }
 
-    public final String getNewName() {
+    public final UnresolvedMailboxName getNewName() {
         return newName;
     }
 }

@@ -19,7 +19,6 @@
 package org.apache.james.mailbox.mock;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +26,8 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,11 @@ public class MockMailboxSession implements MailboxSession{
 
     private long sessionId = RANDOM.nextLong();
     
-    public MockMailboxSession(final String username) {
+    private final MailboxNameResolver mailboxNameResolver;
+    private final MailboxOwner owner;
+    
+    public MockMailboxSession(final String username, MailboxNameResolver mailboxNameResolver) {
+        this.mailboxNameResolver = mailboxNameResolver;
         this.user = new User() {
             
             public String getUserName() {
@@ -55,50 +60,52 @@ public class MockMailboxSession implements MailboxSession{
                 return new ArrayList<Locale>();
             }
         };
+        this.owner = mailboxNameResolver.getOwner(username, false);
     }
     
+    @Override
     public void close() {
         this.close = true;
     }
 
+    @Override
     public Map<Object, Object> getAttributes() {
         return attrs;
     }
 
+    @Override
     public Logger getLog() {
         return log;
     }
 
-    public String getOtherUsersSpace() {
-        return null;
-    }
-
-    public String getPersonalSpace() {
-        return "";
-    }
-
+    @Override
     public long getSessionId() {
         return sessionId;
     }
 
-    public Collection<String> getSharedSpaces() {
-        return new ArrayList<String>();
-    }
-
+    @Override
     public User getUser() {
         return user;
     }
 
+    @Override
     public boolean isOpen() {
         return close == false;
     }
 
-	public char getPathDelimiter() {
-		return '.';
-	}
-
+    @Override
     public SessionType getType() {
         return SessionType.User;
+    }
+
+    @Override
+    public MailboxNameResolver getMailboxNameResolver() {
+        return mailboxNameResolver;
+    }
+
+    @Override
+    public MailboxOwner getOwner() {
+        return owner;
     }
 
 }

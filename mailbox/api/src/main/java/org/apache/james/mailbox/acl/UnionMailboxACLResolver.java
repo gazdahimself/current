@@ -29,15 +29,13 @@ import java.util.Map.Entry;
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.acl.MailboxACL.NameType;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 
 import com.sun.mail.mbox.Mailbox;
 
@@ -230,8 +228,7 @@ public class UnionMailboxACLResolver implements MailboxACLResolver {
     }
 
     /**
-     * @see org.apache.james.mailbox.MailboxACLResolver#applyGlobalACL(org.apache
-     *      .james.mailbox.MailboxACL, boolean)
+     * @see org.apache.james.mailbox.MailboxACLResolver#applyGlobalACL(org.apache.james.mailbox.acl.MailboxACL, boolean)
      */
     @Override
     public MailboxACL applyGlobalACL(MailboxACL resourceACL, boolean resourceOwnerIsGroup) throws UnsupportedRightException {
@@ -242,8 +239,8 @@ public class UnionMailboxACLResolver implements MailboxACLResolver {
      * @see org.apache.james.mailbox.store.mail.MailboxACLResolver#hasRight(java.
      *      lang.String, org.apache.james.mailbox.store.mail.MailboxACLResolver.
      *      GroupMembershipResolver,
-     *      org.apache.james.mailbox.MailboxACL.MailboxACLRight,
-     *      org.apache.james.mailbox.MailboxACL, java.lang.String)
+     *      org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight,
+     *      org.apache.james.mailbox.acl.MailboxACL, java.lang.String)
      */
     @Override
     public boolean hasRight(String requestUser, GroupMembershipResolver groupMembershipResolver, MailboxACLRight right, MailboxACL resourceACL, String resourceOwner, boolean resourceOwnerIsGroup) throws UnsupportedRightException {
@@ -285,7 +282,7 @@ public class UnionMailboxACLResolver implements MailboxACLResolver {
     }
 
     /**
-     * @see org.apache.james.mailbox.acl.MailboxACLResolver#isReadWrite(org.apache.james.mailbox.model.MailboxACL.MailboxACLRights,
+     * @see org.apache.james.mailbox.acl.MailboxACLResolver#isReadWrite(org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights,
      *      javax.mail.Flags)
      */
     @Override
@@ -394,7 +391,7 @@ public class UnionMailboxACLResolver implements MailboxACLResolver {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxACLResolver#rightsOf(java.
      *      lang.String, org.apache.james.mailbox.store.mail.MailboxACLResolver.
-     *      GroupMembershipResolver, org.apache.james.mailbox.MailboxACL,
+     *      GroupMembershipResolver, org.apache.james.mailbox.acl.MailboxACL,
      *      java.lang.String)
      */
     @Override

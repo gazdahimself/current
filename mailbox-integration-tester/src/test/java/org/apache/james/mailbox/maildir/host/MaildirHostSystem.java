@@ -34,6 +34,7 @@ import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.maildir.MaildirMailboxSessionMapperFactory;
 import org.apache.james.mailbox.maildir.MaildirStore;
+import org.apache.james.mailbox.maildir.locator.LocalAndVirtualMailboxLocatorChain;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.MockAuthenticator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
@@ -42,8 +43,11 @@ import org.apache.james.mailbox.store.StoreSubscriptionManager;
 public class MaildirHostSystem extends ImapHostSystem {
 
     public static final String META_DATA_DIRECTORY = "target/user-meta-data";
-    private static final String MAILDIR_HOME = "target/Maildir";
-    
+    private static final File MAILDIR_HOME = new File("target/Maildir");
+    private static final File MAILDIR_HOME_USERS = new File(MAILDIR_HOME, "users");
+    private static final File MAILDIR_HOME_GROUPS = new File(MAILDIR_HOME, "groups");
+    private static final File MAILDIR_HOME_DOMAINS = new File(MAILDIR_HOME, "domains");
+
     private final StoreMailboxManager<Integer> mailboxManager;
     private final MockAuthenticator userManager;
     private final MaildirMailboxSessionMapperFactory mailboxSessionMapperFactory;
@@ -55,7 +59,9 @@ public class MaildirHostSystem extends ImapHostSystem {
     public MaildirHostSystem() throws MailboxException {
         userManager = new MockAuthenticator();
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
-        MaildirStore store = new MaildirStore(MAILDIR_HOME + "/%user", locker);
+        LocalAndVirtualMailboxLocatorChain maildirLocator = new LocalAndVirtualMailboxLocatorChain(MAILDIR_HOME_USERS, MAILDIR_HOME_GROUPS, MAILDIR_HOME_DOMAINS);
+
+        MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
         mailboxSessionMapperFactory = new MaildirMailboxSessionMapperFactory(store);
         StoreSubscriptionManager sm = new StoreSubscriptionManager(mailboxSessionMapperFactory);
         
@@ -69,7 +75,6 @@ public class MaildirHostSystem extends ImapHostSystem {
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
                 new DefaultImapEncoderFactory().buildImapEncoder(),
                 defaultImapProcessorFactory);
-        (new File(MAILDIR_HOME)).mkdirs();
     }
     
     public boolean addUser(String user, String password) throws Exception {
@@ -81,7 +86,7 @@ public class MaildirHostSystem extends ImapHostSystem {
     public void resetData() throws Exception {
         resetUserMetaData();
         try {
-        	FileUtils.deleteDirectory(new File(MAILDIR_HOME));
+        	FileUtils.deleteDirectory(MAILDIR_HOME);
         } catch (Exception e) {
         	e.printStackTrace();
         }

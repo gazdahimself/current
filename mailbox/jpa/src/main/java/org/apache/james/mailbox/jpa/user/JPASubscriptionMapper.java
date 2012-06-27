@@ -26,6 +26,9 @@ import javax.persistence.PersistenceException;
 
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.jpa.JPATransactionalMapper;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.model.Subscription;
 
@@ -33,19 +36,21 @@ import org.apache.james.mailbox.store.user.model.Subscription;
  * JPA implementation of a {@link SubscriptionMapper}. This class is not thread-safe!
  */
 public class JPASubscriptionMapper extends JPATransactionalMapper implements SubscriptionMapper {
-
-    public JPASubscriptionMapper(final EntityManagerFactory entityManagerFactory) {
-        super(entityManagerFactory);
+    
+    public JPASubscriptionMapper(EntityManagerFactory entityManagerFactory, MailboxNameCodec mailboxNameCodec) {
+        super(entityManagerFactory, mailboxNameCodec);
     }
 
-    
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String, java.lang.String)
      */
-    public Subscription findMailboxSubscriptionForUser(final String user, final String mailbox) throws SubscriptionException {
+    @Override
+    public Subscription findMailboxSubscriptionForUser(final MailboxOwner owner, final MailboxName mailbox) throws SubscriptionException {
         try {
-            return (Subscription) getEntityManager().createNamedQuery("findFindMailboxSubscriptionForUser")
-            .setParameter("userParam", user).setParameter("mailboxParam", mailbox).getSingleResult();
+            return (Subscription) getEntityManager().createNamedQuery("findSubscription")
+            .setParameter("userParam", owner.getName())
+            .setParameter("mailboxParam", mailboxNameCodec.encode(mailbox))
+            .getSingleResult();
         } catch (NoResultException e) {
             return null;
         } catch (PersistenceException e) {
@@ -57,6 +62,7 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
      * @throws SubscriptionException 
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#save(Subscription)
      */
+    @Override
     public void save(Subscription subscription) throws SubscriptionException {
         try {
             getEntityManager().persist(subscription);
@@ -70,9 +76,13 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser(java.lang.String)
      */
     @SuppressWarnings("unchecked")
-    public List<Subscription> findSubscriptionsForUser(String user) throws SubscriptionException {
+    @Override
+    public List<Subscription> findSubscriptionsForUser(MailboxOwner owner) throws SubscriptionException {
         try {
-            return (List<Subscription>) getEntityManager().createNamedQuery("findSubscriptionsForUser").setParameter("userParam", user).getResultList();
+            return (List<Subscription>) getEntityManager()
+                    .createNamedQuery("findSubscriptionsForUser")
+                    .setParameter("userParam", owner.getName())
+                    .getResultList();
         } catch (PersistenceException e) {
             throw new SubscriptionException(e);
         }
@@ -82,6 +92,7 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
      * @throws SubscriptionException 
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#delete(Subscription)
      */
+    @Override
     public void delete(Subscription subscription) throws SubscriptionException {
         try {
             getEntityManager().remove(subscription);
@@ -89,4 +100,5 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
             throw new SubscriptionException(e);
         }
     }
+
 }

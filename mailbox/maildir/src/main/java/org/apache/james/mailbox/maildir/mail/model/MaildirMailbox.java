@@ -2,37 +2,48 @@ package org.apache.james.mailbox.maildir.mail.model;
 
 import java.io.IOException;
 
-import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.acl.MailboxACL;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.maildir.MaildirFolder;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 
 public class MaildirMailbox<Id> extends SimpleMailbox<Id> {
 
-    private MaildirFolder folder;
-    private MailboxSession session;
+    private final MaildirFolder folder;
 
-    public MaildirMailbox(MailboxSession session, MailboxPath path, MaildirFolder folder) throws IOException {
-        super(path, folder.getUidValidity());
+    public MaildirMailbox(MaildirMailbox<Id> maildirMailbox) throws IOException {
+        this(maildirMailbox.getMailboxName(), maildirMailbox.getUser(), maildirMailbox.isOwnerGroup(), maildirMailbox.getMaildirFolder());
+    }
+    
+    public MaildirMailbox(MailboxName mailboxName, String user, boolean ownerGroup, MaildirFolder folder) throws IOException {
+        super(mailboxName, user, ownerGroup, folder.getUidValidity());
         this.folder = folder;
-        this.session = session;
     }
 
+    /**
+     * @see org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox#getACL()
+     */
     @Override
     public MailboxACL getACL() {
         try {
-            return folder.getACL(session);
+            return folder.getACL();
         } catch (MailboxException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public MaildirFolder getMaildirFolder() {
+        return folder;
+    }
+
+    /**
+     * @see org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox#setACL(org.apache.james.mailbox.acl.MailboxACL)
+     */
     @Override
     public void setACL(MailboxACL acl) {
         try {
-            folder.setACL(session, acl);
+            folder.setACL(acl);
         } catch (MailboxException e) {
             throw new RuntimeException(e);
         }

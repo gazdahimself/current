@@ -27,19 +27,19 @@ import java.util.Map;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.SimpleMailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL.EditMode;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedCriteriaException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.SearchQuery;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 
 /**

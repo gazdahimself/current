@@ -18,7 +18,8 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Models long term mailbox data.
@@ -31,17 +32,17 @@ public interface Mailbox<Id> {
      */
     Id getMailboxId();
 
-    /**
-     * Gets the current namespace for this mailbox.
-     * @return not null
-     */
-    String getNamespace();
-    
-    /**
-     * Sets the current namespace for this mailbox.
-     * @param namespace not null
-     */
-    void setNamespace(String namespace);
+//    /**
+//     * Gets the current namespace for this mailbox.
+//     * @return not null
+//     */
+//    String getNamespace();
+//    
+//    /**
+//     * Sets the current namespace for this mailbox.
+//     * @param namespace not null
+//     */
+//    void setNamespace(String namespace);
 
     /**
      * Gets the current user for this mailbox.
@@ -55,17 +56,20 @@ public interface Mailbox<Id> {
      */
     void setUser(String user);
 
-    /**
-     * Gets the current name for this mailbox.
-     * @return not null
-     */
-    String getName();
+//    /**
+//     * Gets the current name for this mailbox.
+//     * @return not null
+//     */
+//    String getName();
+//    
+//    /**
+//     * Sets the current name for this mailbox.
+//     * @param name not null
+//     */
+//    void setName(String name);
     
-    /**
-     * Sets the current name for this mailbox.
-     * @param name not null
-     */
-    void setName(String name);
+    MailboxName getMailboxName();
+    void setMailboxName(MailboxName mailboxName);
 
     /**
      * Gets the current UID VALIDITY for this mailbox.
@@ -87,5 +91,18 @@ public interface Mailbox<Id> {
      * @param acl
      */
     void setACL(MailboxACL acl);
+    
+    /**
+     * TODO isOwnerGroup.
+     *
+     * @return
+     */
+    boolean isOwnerGroup();
+
+    /**
+     * TODO setOwnerGroup.
+     *
+     */
+    void setOwnerGroup(boolean ownerGroup);
     
 }

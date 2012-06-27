@@ -50,9 +50,10 @@ import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.MessageRangeException;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequest> extends AbstractMailboxProcessor<M> implements PermitEnableCapabilityProcessor {
 
@@ -77,9 +78,10 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(AbstractMailboxSelectionRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final String mailboxName = request.getMailboxName();
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
         try {
-            final MailboxPath fullMailboxPath = buildFullPath(session, mailboxName);
+            final MailboxName fullMailboxPath = mailboxSession.getMailboxNameResolver().resolve(mailboxName, mailboxSession.getUser().getUserName());
 
             respond(tag, command, session, fullMailboxPath, request, responder);
            
@@ -93,7 +95,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         } 
     }
 
-    private void respond(String tag, ImapCommand command, ImapSession session, MailboxPath fullMailboxPath, AbstractMailboxSelectionRequest request, Responder responder) throws MailboxException, MessageRangeException {
+    private void respond(String tag, ImapCommand command, ImapSession session, MailboxName fullMailboxPath, AbstractMailboxSelectionRequest request, Responder responder) throws MailboxException, MessageRangeException {
         
         Long lastKnownUidValidity = request.getLastKnownUidValidity();
         Long modSeq = request.getKnownModSeq();
@@ -365,7 +367,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
 
             if (msn == SelectedMailbox.NO_SUCH_MESSAGE) {
                 if (session.getLog().isDebugEnabled()) {
-                    session.getLog().debug("No message found with uid " + unseenUid + " in mailbox " + selected.getPath().getFullName(session.getPathDelimiter()));
+                    session.getLog().debug("No message found with uid " + unseenUid + " in mailbox " + selected.getPath());
                 }
                 return false;
             } 
@@ -396,7 +398,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         responder.respond(existsResponse);
     }
 
-    private MessageManager.MetaData selectMailbox(MailboxPath mailboxPath, ImapSession session) throws MailboxException {
+    private MessageManager.MetaData selectMailbox(MailboxName mailboxPath, ImapSession session) throws MailboxException {
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
         final MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, mailboxSession);

@@ -34,7 +34,7 @@ import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.mock.MockMailboxManager;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.junit.Before;
@@ -105,16 +105,17 @@ public class MailboxCopierTest {
              ((StoreMailboxManager<?>) dstMemMailboxManager).init();
          }
     
-        srcMemMailboxManager = new MockMailboxManager(srcMemMailboxManager).getMockMailboxManager();
+        MockMailboxManager mmm = new MockMailboxManager(srcMemMailboxManager, true, true);
+        srcMemMailboxManager = mmm.getMockMailboxManager();
        
-        assertMailboxManagerSize(srcMemMailboxManager, 1);
+        assertMailboxManagerSize(srcMemMailboxManager, 1, mmm.getMailboxCount());
         
         mailboxCopier.copyMailboxes(srcMemMailboxManager, dstMemMailboxManager);
-        assertMailboxManagerSize(dstMemMailboxManager, 1);
+        assertMailboxManagerSize(dstMemMailboxManager, 1, mmm.getMailboxCount());
         
         // We copy a second time to assert existing mailboxes does not give issue.
         mailboxCopier.copyMailboxes(srcMemMailboxManager, dstMemMailboxManager);
-        assertMailboxManagerSize(dstMemMailboxManager, 2);
+        assertMailboxManagerSize(dstMemMailboxManager, 2, mmm.getMailboxCount());
         
     }
     
@@ -125,16 +126,16 @@ public class MailboxCopierTest {
      * @throws MailboxException 
      * @throws BadCredentialsException 
      */
-    private void assertMailboxManagerSize(MailboxManager mailboxManager, int multiplicationFactor) throws BadCredentialsException, MailboxException {
+    private void assertMailboxManagerSize(MailboxManager mailboxManager, int multiplicationFactor, int expectedMailboxCount) throws BadCredentialsException, MailboxException {
         
         MailboxSession mailboxSession = mailboxManager.createSystemSession("manager", LoggerFactory.getLogger("src-mailbox-copier"));        
         mailboxManager.startProcessingRequest(mailboxSession);
 
-        List<MailboxPath> mailboxPathList = mailboxManager.list(mailboxSession);
+        List<MailboxName> mailboxPathList = mailboxManager.list(mailboxSession);
         
-        Assert.assertEquals(MockMailboxManager.EXPECTED_MAILBOXES_COUNT, mailboxPathList.size());
+        Assert.assertEquals(expectedMailboxCount, mailboxPathList.size());
         
-        for (MailboxPath mailboxPath: mailboxPathList) {
+        for (MailboxName mailboxPath: mailboxPathList) {
             MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
             Assert.assertEquals(MockMailboxManager.MESSAGE_PER_MAILBOX_COUNT * multiplicationFactor, messageManager.getMessageCount(mailboxSession));
         }

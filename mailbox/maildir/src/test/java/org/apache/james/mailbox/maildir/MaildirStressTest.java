@@ -29,33 +29,42 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.maildir.locator.LocalAndVirtualMailboxLocatorChain;
+import org.apache.james.mailbox.maildir.locator.LocalSystemMaildirLocator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
-import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.junit.After;
 import org.junit.Before;
 
 public class MaildirStressTest extends AbstractStressTest {
 
-    private static final String MAILDIR_HOME = "target/Maildir";
+    private static final File MAILDIR_HOME = new File("target/Maildir");
+    private static final File MAILDIR_HOME_USERS = new File(MAILDIR_HOME, "users");
+    private static final File MAILDIR_HOME_GROUPS = new File(MAILDIR_HOME, "groups");
+    private static final File MAILDIR_HOME_DOMAINS = new File(MAILDIR_HOME, "domains");
+    private LocalSystemMaildirLocator maildirLocator;
 
-    private StoreMailboxManager<Integer> mailboxManager;
+    private MaildirMailboxManager<Integer> mailboxManager;
     
     @Before
-    public void setUp() throws MailboxException {
-        MaildirStore store = new MaildirStore(MAILDIR_HOME + "/%user", new JVMMailboxPathLocker());
+    public void setUp() throws MailboxException, IOException {
+        
+        FileUtils.deleteDirectory(MAILDIR_HOME);
+        
+        maildirLocator = new LocalAndVirtualMailboxLocatorChain(MAILDIR_HOME_USERS, MAILDIR_HOME_GROUPS, MAILDIR_HOME_DOMAINS);
+        MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
 
         MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
 
-        mailboxManager = new StoreMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
+        mailboxManager = new MaildirMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
         mailboxManager.init();
 
     }
     
     @After
     public void tearDown() throws IOException {
-        FileUtils.deleteDirectory(new File(MAILDIR_HOME));
+        FileUtils.deleteDirectory(MAILDIR_HOME);
     }
 
     @Override

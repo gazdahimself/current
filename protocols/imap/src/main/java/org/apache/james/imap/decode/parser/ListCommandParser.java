@@ -23,8 +23,9 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.decode.ImapRequestLineReader;
-import org.apache.james.imap.decode.ImapRequestLineReader.ATOM_CHARValidator;
 import org.apache.james.imap.message.request.ListRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.protocols.imap.DecodingException;
 
 /**
@@ -41,48 +42,21 @@ public class ListCommandParser extends AbstractUidCommandParser {
     }
 
     /**
-     * Reads an argument of type "list_mailbox" from the request, which is the
-     * second argument for a LIST or LSUB command. Valid values are a "string"
-     * argument, an "atom" with wildcard characters.
-     * 
-     * @return An argument of type "list_mailbox"
-     */
-    public String listMailbox(ImapRequestLineReader request) throws DecodingException {
-        char next = request.nextWordChar();
-        switch (next) {
-        case '"':
-            return request.consumeQuoted();
-        case '{':
-            return request.consumeLiteral(null);
-        default:
-            return request.consumeWord(new ListCharValidator());
-        }
-    }
-
-    private class ListCharValidator extends ATOM_CHARValidator {
-        public boolean isValid(char chr) {
-            if (ImapRequestLineReader.isListWildcard(chr)) {
-                return true;
-            }
-            return super.isValid(chr);
-        }
-    }
-
-    /**
      * @see
      * org.apache.james.imap.decode.parser.AbstractUidCommandParser#decode(org.apache.james.imap.api.ImapCommand,
      * org.apache.james.imap.decode.ImapRequestLineReader, java.lang.String,
      * boolean, org.apache.james.imap.api.process.ImapSession)
      */
     protected ImapMessage decode(ImapCommand command, ImapRequestLineReader request, String tag, boolean useUids, ImapSession session) throws DecodingException {
-        String referenceName = request.mailbox();
-        String mailboxPattern = listMailbox(request);
+        MailboxNameCodec nameCodec = session.getMailboxNameCodec();
+        UnresolvedMailboxName referenceName = nameCodec.decode(request.astring());
+        UnresolvedMailboxName mailboxPattern = nameCodec.decode(request.astring());
         request.eol();
         final ImapMessage result = createMessage(command, referenceName, mailboxPattern, tag);
         return result;
     }
 
-    protected ImapMessage createMessage(ImapCommand command, final String referenceName, final String mailboxPattern, final String tag) {
+    protected ImapMessage createMessage(ImapCommand command, final UnresolvedMailboxName referenceName, final UnresolvedMailboxName mailboxPattern, final String tag) {
         final ImapMessage result = new ListRequest(command, referenceName, mailboxPattern, tag);
         return result;
     }

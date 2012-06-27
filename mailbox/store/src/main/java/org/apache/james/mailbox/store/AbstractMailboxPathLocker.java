@@ -21,7 +21,7 @@ package org.apache.james.mailbox.store;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 
 public abstract class AbstractMailboxPathLocker implements MailboxPathLocker{
@@ -29,12 +29,12 @@ public abstract class AbstractMailboxPathLocker implements MailboxPathLocker{
     /**
      * @see org.apache.james.mailbox.MailboxPathLocker#executeWithLock(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.model.MailboxPath, org.apache.james.mailbox.MailboxPathLocker.LockAwareExecution)
      */
-    public <T> T executeWithLock(MailboxSession session, MailboxPath path, LockAwareExecution<T> execution) throws MailboxException {
+    public <T> T executeWithLock(MailboxSession session, MailboxName path, LockAwareExecution<T> execution) throws MailboxException {
         return executeWithLock(session, path, execution, true);
     }
     
     @Override
-    public <T> T executeWithLock(MailboxSession session, MailboxPath path, LockAwareExecution<T> execution, boolean writeLock) throws MailboxException {
+    public <T> T executeWithLock(MailboxSession session, MailboxName path, LockAwareExecution<T> execution, boolean writeLock) throws MailboxException {
         try {
             lock(session, path, writeLock);
             return execution.execute();
@@ -51,7 +51,7 @@ public abstract class AbstractMailboxPathLocker implements MailboxPathLocker{
      * @param path
      * @throws MailboxException
      */
-    protected abstract void lock(MailboxSession session, MailboxPath path, boolean writeLock) throws MailboxException;
+    protected abstract void lock(MailboxSession session, MailboxName path, boolean writeLock) throws MailboxException;
 
     /**
      * Release lock
@@ -60,6 +60,6 @@ public abstract class AbstractMailboxPathLocker implements MailboxPathLocker{
      * @param path
      * @throws MailboxException
      */
-    protected abstract void unlock(MailboxSession session, MailboxPath path, boolean writeLock) throws MailboxException;
+    protected abstract void unlock(MailboxSession session, MailboxName path, boolean writeLock) throws MailboxException;
 
 }

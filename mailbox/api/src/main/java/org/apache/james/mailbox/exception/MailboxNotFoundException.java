@@ -19,7 +19,7 @@
 
 package org.apache.james.mailbox.exception;
 
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Indicates that the failure is caused by a reference to a mailbox which does
@@ -36,6 +36,7 @@ public class MailboxNotFoundException extends MailboxException {
      *            name of the mailbox, not null
      */
     public MailboxNotFoundException(String mailboxName) {
+        super("Mailbox not found: "+ mailboxName);
         this.mailboxName = mailboxName;
     }
 
@@ -43,8 +44,8 @@ public class MailboxNotFoundException extends MailboxException {
      * @param mailboxPath
      *            name of the mailbox, not null
      */
-    public MailboxNotFoundException(MailboxPath mailboxPath) {
-        this.mailboxName = mailboxPath.toString();
+    public MailboxNotFoundException(MailboxName mailboxPath) {
+        this(mailboxPath.toString());
     }
 
     /**

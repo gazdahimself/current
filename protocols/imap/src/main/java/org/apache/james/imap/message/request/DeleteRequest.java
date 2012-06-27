@@ -20,14 +20,15 @@ package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.message.request.ImapRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * {@link ImapRequest} which request the deletion of a mailbox
  */
 public class DeleteRequest extends AbstractImapRequest {
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
 
-    public DeleteRequest(final ImapCommand command, final String mailboxName, final String tag) {
+    public DeleteRequest(final ImapCommand command, final UnresolvedMailboxName mailboxName, final String tag) {
         super(tag, command);
         this.mailboxName = mailboxName;
     }
@@ -37,7 +38,7 @@ public class DeleteRequest extends AbstractImapRequest {
      * 
      * @return mailboxName
      */
-    public final String getMailboxName() {
+    public final UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 }

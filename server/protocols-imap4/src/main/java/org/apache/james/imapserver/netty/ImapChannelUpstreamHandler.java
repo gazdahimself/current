@@ -32,6 +32,7 @@ import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.imap.encode.ImapResponseComposer;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.main.ResponseEncoder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
 import org.apache.james.protocols.api.logger.ProtocolLoggerAdapter;
 import org.apache.james.protocols.api.logger.ProtocolSessionLogger;
 import org.apache.james.protocols.lib.Slf4jLoggerAdapter;
@@ -65,16 +66,16 @@ public class ImapChannelUpstreamHandler extends SimpleChannelUpstreamHandler imp
     private ImapProcessor processor;
 
     private ImapEncoder encoder;
-
+    
     private final ImapHeartbeatHandler heartbeatHandler = new ImapHeartbeatHandler();
 
     private boolean plainAuthDisallowed;
     
-    public ImapChannelUpstreamHandler(final String hello, final ImapProcessor processor, ImapEncoder encoder, final Logger logger, boolean compress, boolean plainAuthDisallowed) {
-        this(hello, processor, encoder, logger, compress, plainAuthDisallowed, null, null);
+    public ImapChannelUpstreamHandler(final String hello, final ImapProcessor processor, ImapEncoder encoder, final MailboxNameResolver mailboxNameResolver, final Logger logger, boolean compress, boolean plainAuthDisallowed) {
+        this(hello, processor, encoder, mailboxNameResolver, logger, compress, plainAuthDisallowed, null, null);
     }
 
-    public ImapChannelUpstreamHandler(final String hello, final ImapProcessor processor, ImapEncoder encoder, final Logger logger, boolean compress, boolean plainAuthDisallowed, SSLContext context, String[] enabledCipherSuites) {
+    public ImapChannelUpstreamHandler(final String hello, final ImapProcessor processor, ImapEncoder encoder, final MailboxNameResolver mailboxNameResolver, final Logger logger, boolean compress, boolean plainAuthDisallowed, SSLContext context, String[] enabledCipherSuites) {
         this.logger = logger;
         this.hello = hello;
         this.processor = processor;

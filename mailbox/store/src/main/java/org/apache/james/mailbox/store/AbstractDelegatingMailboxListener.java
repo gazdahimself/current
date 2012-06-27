@@ -26,7 +26,7 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxListenerSupport;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 public abstract class AbstractDelegatingMailboxListener implements MailboxListener, MailboxListenerSupport{
     
@@ -38,8 +38,8 @@ public abstract class AbstractDelegatingMailboxListener implements MailboxListen
      * {@link org.apache.james.mailbox.MailboxListener.Event#getMailboxPath()}
      */
     public void event(Event event) {
-        MailboxPath path = event.getMailboxPath();
-        Map<MailboxPath, List<MailboxListener>> listeners = getListeners();
+        MailboxName path = event.getMailboxPath();
+        Map<MailboxName, List<MailboxListener>> listeners = getListeners();
         synchronized (listeners) {
             List<MailboxListener> mListeners = listeners.get(path);
             if (mListeners != null && mListeners.isEmpty() == false) {
@@ -94,8 +94,8 @@ public abstract class AbstractDelegatingMailboxListener implements MailboxListen
     /**
      * @see org.apache.james.mailbox.MailboxListenerSupport#addListener(org.apache.james.mailbox.model.MailboxPath, org.apache.james.mailbox.MailboxListener, org.apache.james.mailbox.MailboxSession)
      */
-    public void addListener(MailboxPath path, MailboxListener listener, MailboxSession session) throws MailboxException {
-        Map<MailboxPath, List<MailboxListener>> listeners = getListeners();
+    public void addListener(MailboxName path, MailboxListener listener, MailboxSession session) throws MailboxException {
+        Map<MailboxName, List<MailboxListener>> listeners = getListeners();
         
         if (listeners != null) {
             synchronized (listeners) {
@@ -131,8 +131,8 @@ public abstract class AbstractDelegatingMailboxListener implements MailboxListen
     /**
      * @see org.apache.james.mailbox.MailboxListenerSupport#removeListener(org.apache.james.mailbox.model.MailboxPath, org.apache.james.mailbox.MailboxListener, org.apache.james.mailbox.MailboxSession)
      */
-    public void removeListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
-        Map<MailboxPath, List<MailboxListener>> listeners = getListeners();
+    public void removeListener(MailboxName mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
+        Map<MailboxName, List<MailboxListener>> listeners = getListeners();
         
         if (listeners != null) {
             synchronized (listeners) {
@@ -169,7 +169,7 @@ public abstract class AbstractDelegatingMailboxListener implements MailboxListen
      * 
      * @return listeners
      */
-    protected abstract Map<MailboxPath, List<MailboxListener>> getListeners();
+    protected abstract Map<MailboxName, List<MailboxListener>> getListeners();
     
     /**
      * Return the {@link List} which is used tos tore the global {@link MailboxListener}

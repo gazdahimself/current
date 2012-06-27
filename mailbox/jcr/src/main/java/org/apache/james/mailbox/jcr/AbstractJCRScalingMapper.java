@@ -18,34 +18,88 @@
  ****************************************************************/
 package org.apache.james.mailbox.jcr;
 
+import java.util.ListIterator;
+
 import javax.jcr.Node;
+import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
+import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.commons.JcrUtils;
+import org.apache.jackrabbit.util.ISO9075;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 import org.slf4j.Logger;
 
 /**
- * Abstract base class for Mapper's which support scaling. This supports Level 1 Implementations of JCR. So no real transaction management is used. 
+ * Abstract base class for Mapper's which support scaling. This supports Level 1
+ * Implementations of JCR. So no real transaction management is used.
  * 
- * The Session.save() will get called on commit() method,  session.refresh(false) on rollback, and session.refresh(true) on begin()
- *
+ * The Session.save() will get called on commit() method, session.refresh(false)
+ * on rollback, and session.refresh(true) on begin()
+ * 
  */
 public abstract class AbstractJCRScalingMapper extends TransactionalMapper implements JCRImapConstants {
-    public final static String MAILBOXES_PATH =  "mailboxes";
+    private interface NodeVisitor {
+        void visit(String nodeName, String nodeType, String... mixin) throws RepositoryException;
+    }
 
-    private final MailboxSessionJCRRepository repository;
+    private static class XPathNodeVisitor implements NodeVisitor {
+        private JCRXPathQueryBuilder queryBuilder;
+
+        public XPathNodeVisitor(JCRXPathQueryBuilder queryBuilder) {
+            super();
+            this.queryBuilder = queryBuilder;
+        }
+
+        @Override
+        public void visit(String nodeName, String nodeType, String... mixin) throws RepositoryException {
+        
+            queryBuilder.delimiter().escapeName(nodeName);
+            
+        }
+        
+    }
+    
+    private static class GetOrAddNodeVisitor implements NodeVisitor {
+        
+        private Node result;
+    
+        public GetOrAddNodeVisitor(Node result) {
+            super();
+            this.result = result;
+        }
+    
+        public Node getResult() {
+            return result;
+        }
+    
+        @Override
+        public void visit(String nodeName, String nodeType, String... mixin) throws RepositoryException {
+            result = JcrUtils.getOrAddNode(result, ISO9075.encodePath(nodeName), nodeType);
+            if (mixin != null && mixin.length > 0) {
+                for (String mix : mixin) {
+                    result.addMixin(mix);
+                }
+            }
+        }
+    }
+
+
+    protected final MailboxSessionJCRRepository repository;
     private final int scaling;
 
-    private MailboxSession mSession;
-    private final static char PAD ='_';
-    
+    protected final MailboxSession mSession;
+    private final static char PAD = '_';
+
     public AbstractJCRScalingMapper(MailboxSessionJCRRepository repository, MailboxSession mSession, int scaling) {
         this.scaling = scaling;
-        
+
         this.mSession = mSession;
         this.repository = repository;
     }
@@ -58,20 +112,21 @@ public abstract class AbstractJCRScalingMapper extends TransactionalMapper imple
     protected Logger getLogger() {
         return mSession.getLog();
     }
-    
+
     /**
      * Return the JCR Session
      * 
      * @return session
      */
-    protected Session getSession() throws RepositoryException{
+    protected Session getSession() throws RepositoryException {
         return repository.login(mSession);
     }
 
     /**
-     * Begin is not supported by level 1 JCR implementations, however we refresh the session
+     * Begin is not supported by level 1 JCR implementations, however we refresh
+     * the session
      */
-    protected void begin() throws MailboxException {  
+    protected void begin() throws MailboxException {
         try {
             getSession().refresh(true);
         } catch (RepositoryException e) {
@@ -81,7 +136,8 @@ public abstract class AbstractJCRScalingMapper extends TransactionalMapper imple
     }
 
     /**
-     * Just call save on the underlying JCR Session, because level 1 JCR implementation does not offer Transactions
+     * Just call save on the underlying JCR Session, because level 1 JCR
+     * implementation does not offer Transactions
      */
     protected void commit() throws MailboxException {
         try {
@@ -94,7 +150,8 @@ public abstract class AbstractJCRScalingMapper extends TransactionalMapper imple
     }
 
     /**
-     * Rollback is not supported by level 1 JCR implementations, so just do nothing
+     * Rollback is not supported by level 1 JCR implementations, so just do
+     * nothing
      */
     protected void rollback() throws MailboxException {
         try {
@@ -109,72 +166,122 @@ public abstract class AbstractJCRScalingMapper extends TransactionalMapper imple
      * Logout from open JCR Session
      */
     public void endRequest() {
-       repository.logout(mSession);
+        repository.logout(mSession);
     }
     
+    protected Node getOrAddInboxNode(MailboxOwner owner) throws RepositoryException {
+        
+        Session session = getSession();
+        Node mailboxesNode = JcrUtils.getOrAddNode(session.getRootNode(), JCRImapConstants.MAILBOXES_PATH);
+        mailboxesNode.addMixin(JcrConstants.MIX_LOCKABLE);
+        session.save();
+
+        GetOrAddNodeVisitor visitor = new GetOrAddNodeVisitor(mailboxesNode);
+        buildInboxNode(owner, visitor);
+        return visitor.getResult();
+        
+    }
+    
+    protected void buildInboxNode(MailboxOwner owner, NodeVisitor nodeVisitor) throws RepositoryException {
+        MailboxNameResolver mailboxNameResolver = mSession.getMailboxNameResolver();
+        MailboxName inbox = mailboxNameResolver.getInbox(owner);
+        
+        ListIterator<String> segmentsIt = inbox.segmentsIterator();
+        while (segmentsIt.hasNext()) {
+            String segment = segmentsIt.next();
+            if (segmentsIt.hasNext()) {
+                nodeVisitor.visit(segment, JcrConstants.NT_UNSTRUCTURED);
+            }
+            else {
+                /* we assume here that the terminal node corresponds to user name 
+                 * Note that we do not scale segments which correspond to domains */
+                scale(segment, JCRImapConstants.USER_TYPE, nodeVisitor);
+            }
+        }
+    }
+
+    
+
     /**
-     * Construct the user node path part, using the specified scaling factor.
-     * If the username is not long enough it will fill it with {@link #PAD}
+     * Scales the given node name - i.e. it puts the given name behind several "scaling" node levels.
      * 
-     * So if you use a scaling of 2 it will look like:
+     * Examples for scaling = 2:
      * 
-     * foo:
-     *     f/fo/foo
-     *     
-     * fo:
-     *     f/fo/fo
-     * 
-     * f: 
-     *    f/f_/f
-     * 
-     * @param username
-     * @return path
+     * <table>
+     * <tr><th>node name</th><th>scaled node hierarchy</th></tr>
+     * <tr><td>foo</td><td>f/fo/foo</td></tr>
+     * <tr><td>fo</td><td>f/fo/fo</td></tr>
+     * <tr><td>f</td><td>f/f_/f</td></tr>
+     * </table>
+     *
+     * @param segment
+     * @return
+     * @throws RepositoryException 
      */
-    protected String constructUserPathPart(String username) {
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0 ; i < scaling; i++) {
-            if (username.length() > i) {
-                sb.append(username.substring(0,i+1));
+    private void scale(String nameToScale, String terminalType, NodeVisitor nodeVisitor) throws RepositoryException {
+        int nameToScaleLength = nameToScale.length();
+        final StringBuilder sb = nameToScaleLength < scaling ? new StringBuilder(scaling) : null;
+        for (int i = 0; i < scaling; i++) {
+            final String scaledName;
+            if (nameToScaleLength > i) {
+                scaledName = nameToScale.substring(0, i + 1);
             } else {
-                sb.append(username);
-                int a = i - username.length();
-                for (int b = 0; b < a; b++) {
+                int j = 0;
+                while (j < scaling && j < nameToScaleLength) {
+                    sb.append(nameToScale.charAt(j++));
+                }
+                while (j < scaling) {
                     sb.append(PAD);
                 }
+                scaledName = sb.toString();
+                sb.setLength(0);
             }
-            sb.append(NODE_DELIMITER);
+            nodeVisitor.visit(scaledName, JcrConstants.NT_UNSTRUCTURED);
         }
-        sb.append(username);
-        return sb.toString();
-
+        nodeVisitor.visit(nameToScale, JcrConstants.NT_UNSTRUCTURED, terminalType);
+    }
+    
+    protected Node findInboxNode(MailboxOwner owner) throws RepositoryException {
+        JCRXPathQueryBuilder pb = new JCRXPathQueryBuilder(128).mailboxes();
+        appendInboxPath(pb, owner);
+        return getSession().getNode(pb.toString());
     }
 
     /**
-     * Create the needed Node structure for the given username using the given Node as parent.
+     * Returns a {@link JCRXPathQueryBuilder} with the query common to
+     * {@link #findMailboxSubscriptionForUser(String, MailboxName)} and
+     * {@link #findSubscriptionsForUser(String)}.
      * 
-     * The method will use {@link #constructUserPathPart(String)} for create the needed node path and split
-     * it when a NODE_DELIMITER was found
-     * 
-     * @param parent
-     * @param username
-     * @return userNode
-     * @throws RepositoryException
+     * @param user
+     * @return a {@link JCRXPathQueryBuilder}
      */
-    protected Node createUserPathStructure(Node parent, String username)
-            throws RepositoryException {
-        String userpath = constructUserPathPart(username);
-
-        String[] userPathParts = userpath.split(NODE_DELIMITER);
-        for (int a = 0; a < userPathParts.length; a++) {
-            parent = JcrUtils.getOrAddNode(parent, userPathParts[a],
-                    "nt:unstructured");
-
-            // thats the last user node so add the right mixin type
-            if (a + 1 == userPathParts.length)
-                parent.addMixin("jamesMailbox:user");
+    protected void appendInboxPath(JCRXPathQueryBuilder result, MailboxOwner owner) {
+        try {
+            buildInboxNode(owner, new XPathNodeVisitor(result));
+        } catch (RepositoryException e) {
+            /* should never happen as XPathNodeVisitor does not throw anything */
+            throw new RuntimeException(e);
         }
-
-        return parent;
-
     }
+    
+
+    /**
+     * TODO findNodeByPath.
+     *
+     * @param path
+     * @return
+     * @throws RepositoryException 
+     * @throws PathNotFoundException 
+     */
+    protected Node findNodeByMailboxName(MailboxName path) throws PathNotFoundException, RepositoryException {
+        JCRXPathQueryBuilder pb = new JCRXPathQueryBuilder(128).mailboxes();
+        MailboxOwner owner = mSession.getMailboxNameResolver().getOwner(path);
+        appendInboxPath(pb, owner);
+        
+        String encodedName = repository.getMailboxNameAttributeCodec().encode(path);
+        pb.delimiter().escapeName(encodedName);
+
+        return getSession().getNode(pb.toString());
+    }
+    
 }

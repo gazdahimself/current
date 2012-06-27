@@ -32,12 +32,9 @@ import javax.mail.Flags;
 
 import junit.framework.Assert;
 
-import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -54,11 +51,13 @@ public abstract class AbstractStressTest {
         final CountDownLatch latch = new CountDownLatch(APPEND_OPERATIONS);
         final ExecutorService pool = Executors.newFixedThreadPool(APPEND_OPERATIONS/2);
         final List<Long> uList = new ArrayList<Long>();
-        MailboxSession session = getMailboxManager().createSystemSession("test", LoggerFactory.getLogger("Test"));
+        String user = "test";
+        MailboxSession session = getMailboxManager().createSystemSession(user, LoggerFactory.getLogger("Test"));
         getMailboxManager().startProcessingRequest(session);
-        final MailboxPath path = new MailboxPath(MailboxConstants.USER_NAMESPACE, "username", "INBOX");
-        getMailboxManager().createMailbox(path, session);
-        getMailboxManager().addListener(path, new MailboxListener() {
+        MailboxNameResolver nameResolver = session.getMailboxNameResolver();
+        final MailboxName inbox = nameResolver.getInbox(session.getOwner());
+        getMailboxManager().createMailbox(inbox, session);
+        getMailboxManager().addListener(inbox, new MailboxListener() {
 			
 			
 			@Override
@@ -88,7 +87,7 @@ public abstract class AbstractStressTest {
                         MailboxSession session = getMailboxManager().createSystemSession("test", LoggerFactory.getLogger("Test"));
 
                         getMailboxManager().startProcessingRequest(session);
-                        MessageManager m = getMailboxManager().getMailbox(path, session);
+                        MessageManager m = getMailboxManager().getMailbox(inbox, session);
                         Long uid =  m.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), session, false, new Flags());
                         
                         System.out.println("Append message with uid=" + uid);

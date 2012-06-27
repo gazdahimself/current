@@ -20,6 +20,8 @@ package org.apache.james.mailbox.jcr;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.jcr.user.model.JCRSubscription;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.mailbox.store.user.model.Subscription;
 import org.slf4j.Logger;
@@ -37,7 +39,8 @@ public class JCRSubscriptionManager extends StoreSubscriptionManager implements 
     }
 
     @Override
-    protected Subscription createSubscription(MailboxSession session, String mailbox) {
-        return new JCRSubscription(session.getUser().getUserName(), mailbox, logger);
+    protected Subscription createSubscription(MailboxSession session, MailboxName mailbox) {
+        MailboxNameCodec mailboxNameCodec = ((JCRMailboxSessionMapperFactory)mapperFactory).getRepository().getMailboxNameAttributeCodec();
+        return new JCRSubscription(session.getUser().getUserName(), mailbox, mailboxNameCodec , logger);
     }
 }

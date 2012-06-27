@@ -27,7 +27,8 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.mail.HBaseMailboxMapper;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
@@ -50,8 +51,8 @@ public class HBaseMailboxManager extends StoreMailboxManager<UUID> {
     }
 
     @Override
-    protected Mailbox<UUID> doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
-        return new HBaseMailbox(mailboxPath, randomUidValidity());
+    protected Mailbox<UUID> doCreateMailbox(MailboxName mailboxPath, MailboxOwner owner, MailboxSession session) throws MailboxException {
+        return new HBaseMailbox(mailboxPath, owner.getName(), owner.isGroup(), randomUidValidity());
     }
 
     /**

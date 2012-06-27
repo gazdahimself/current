@@ -40,11 +40,11 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Default implementation of {@link SelectedMailbox}
@@ -57,10 +57,9 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
     private MailboxManager mailboxManager;
 
-    private MailboxPath path;
+    private MailboxName path;
 
     private final ImapSession session;
-    
 
     private final static Flags FLAGS = new Flags();
     static {
@@ -91,7 +90,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
     private int highestMsn = 0;
     
-    public SelectedMailboxImpl(final MailboxManager mailboxManager, final ImapSession session, final MailboxPath path) throws MailboxException {
+    public SelectedMailboxImpl(final MailboxManager mailboxManager, final ImapSession session, final MailboxName path) throws MailboxException {
         this.session = session;
         this.sessionId = ImapSessionUtils.getMailboxSession(session).getSessionId();
         this.mailboxManager = mailboxManager;
@@ -257,7 +256,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
      * @see org.apache.james.imap.api.process.SelectedMailbox#getPath()
      */
     
-    public synchronized MailboxPath getPath() {
+    public synchronized MailboxName getPath() {
         return path;
     }
 
@@ -475,7 +474,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
                             while (flags.hasNext()) {
                                 if (Flag.RECENT.equals(flags.next())) {
-                                    MailboxPath path = sm.getPath();
+                                    MailboxName path = sm.getPath();
                                     if (path != null && path.equals(event.getMailboxPath())) {
                                         sm.addRecent(u.getUid());
                                     }

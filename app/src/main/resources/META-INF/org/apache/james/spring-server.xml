@@ -266,6 +266,7 @@
     <bean id="imapserver" class="org.apache.james.imapserver.netty.IMAPServerFactory">
         <property name="imapDecoder" ref="imapDecoder"/>
         <property name="imapEncoder" ref="imapEncoder"/>
+        <property name="imapMailboxNameResolver" ref="imapMailboxNameResolver"/>    
     </bean>
     <!-- The imapProcessor configuration will be reviewed when IMAP will be integrated into Protocols project -->
     <!-- Temporary configuration - see IMAP-357 -->
@@ -279,7 +280,7 @@
         <!-- The list of disabled capabilities -->
         <constructor-arg index="4">
           <set>
-            <value>ACL</value>
+            <!-- <value>ACL</value> -->
           </set>
        </constructor-arg>
     </bean>
@@ -287,6 +288,7 @@
     <bean id="imapDecoderFactory" class="org.apache.james.imap.main.DefaultImapDecoderFactory"/>
     <bean id="imapEncoder" factory-bean="imapEncoderFactory"  factory-method="buildImapEncoder"/>
     <bean id="imapEncoderFactory" class="org.apache.james.imap.encode.main.DefaultImapEncoderFactory"/>
+    <bean id="imapMailboxNameResolver" class="org.apache.james.imap.api.name.DefaultMailboxNameResolver"/>
 
     <!-- 
     ===========================================================================

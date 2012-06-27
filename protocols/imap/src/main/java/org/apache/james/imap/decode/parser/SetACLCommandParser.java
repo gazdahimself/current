@@ -26,6 +26,7 @@ import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.decode.ImapRequestLineReader;
 import org.apache.james.imap.decode.base.AbstractImapCommandParser;
 import org.apache.james.imap.message.request.SetACLRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.apache.james.protocols.imap.DecodingException;
 
 /**
@@ -41,7 +42,7 @@ public class SetACLCommandParser extends AbstractImapCommandParser {
 
     @Override
     protected ImapMessage decode(ImapCommand command, ImapRequestLineReader request, String tag, ImapSession session) throws DecodingException {
-        final String mailboxName = request.mailbox();
+        final UnresolvedMailboxName mailboxName = session.getMailboxNameCodec().decode(request.astring());
         final String identifier = request.astring();
         final String rights = request.astring();
         request.eol();

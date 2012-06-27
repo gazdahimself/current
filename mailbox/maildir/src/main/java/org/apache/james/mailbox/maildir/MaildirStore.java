@@ -20,34 +20,32 @@ package org.apache.james.mailbox.maildir;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.maildir.locator.MaildirLocator;
 import org.apache.james.mailbox.maildir.mail.model.MaildirMailbox;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 
 public class MaildirStore implements UidProvider<Integer>, ModSeqProvider<Integer>{
-
-    public static final String PATH_USER = "%user";
-    public static final String PATH_DOMAIN = "%domain";
-    public static final String PATH_FULLUSER = "%fulluser";
-    public static final String WILDCARD = "%";
     
-    public static final String maildirDelimiter = ".";
-    
-    private String maildirLocation;
-    
-    private File maildirRootFile;
+//    private String maildirLocation;
+//    private File maildirRootFile;
+//    private final File storeRoot;
     private final MailboxPathLocker locker;
+    
+    private final MaildirLocator maildirLocator;
     
     /**
      * Construct a MaildirStore with a location. The location String
@@ -59,188 +57,229 @@ public class MaildirStore implements UidProvider<Integer>, ModSeqProvider<Intege
      * @param maildirLocation A String with variables
      * @param locker
      */
-    public MaildirStore(String maildirLocation, MailboxPathLocker locker) {
-        this.maildirLocation = maildirLocation;
+    public MaildirStore(MailboxPathLocker locker, MaildirLocator maildirLocator) {
         this.locker = locker;
+        this.maildirLocator = maildirLocator;
+    }
+    public List<Mailbox<Integer>> listMailboxes(MailboxNameResolver mailboxNameResolver) throws IOException {
+        
+        Collection<MailboxOwner> owners = maildirLocator.listOwners();
+        ArrayList<Mailbox<Integer>> result = new ArrayList<Mailbox<Integer>>(owners.size() * 8);
+        for (MailboxOwner owner : owners) {
+            File inboxPath = maildirLocator.getInbox(owner);
+            if (inboxPath.exists()) {
+                MailboxName inbox = mailboxNameResolver.getInbox(owner);
+                addMailboxes(inbox, inboxPath, owner, result);
+            }
+        }
+        return result;
     }
     
-    public MaildirStore(String maildirLocation) {
-        this(maildirLocation, new JVMMailboxPathLocker());
+    public List<Mailbox<Integer>> listMailboxes(MailboxNameResolver mailboxNameResolver, MailboxOwner owner) throws IOException {
+        File inboxPath = maildirLocator.getInbox(owner);
+        if (inboxPath.exists()) {
+            MailboxName inbox = mailboxNameResolver.getInbox(owner);
+            ArrayList<Mailbox<Integer>> result = new ArrayList<Mailbox<Integer>>();
+            addMailboxes(inbox, inboxPath, owner, result);
+            return result;
+        }
+        else {
+            return Collections.emptyList();
+        }
     }
     
-    
-    public String getMaildirLocation() {
-        return maildirLocation;
+    protected void addMailboxes(MailboxName inbox, File inboxPath, MailboxOwner owner, ArrayList<Mailbox<Integer>> result) throws IOException {
+        File[] children = inboxPath.listFiles();
+        result.ensureCapacity(result.size() + children.length + 1);
+        MaildirFolder folder = new MaildirFolder(inboxPath, inbox, locker);
+        if (folder.exists()) {
+            result.add(new MaildirMailbox<Integer>(inbox, owner.getName(), owner.isGroup(), folder));
+            for (File child : children) {
+                if (child.isDirectory() && maildirLocator.isSubMaildir(inboxPath, child)) {
+                    MailboxName mailboxName = maildirLocator.toMailboxName(inbox, inboxPath, owner, child);
+                    folder = new MaildirFolder(child, mailboxName , locker);
+                    if (folder.exists()) {
+                        result.add(new MaildirMailbox<Integer>(mailboxName, owner.getName(), owner.isGroup(), folder));
+                    }
+                }
+            }
+        }
     }
+    
     /**
      * Create a {@link MaildirFolder} for a mailbox
      * @param mailbox
      * @return The MaildirFolder
+     * @throws MailboxException 
      */
-    public MaildirFolder createMaildirFolder(Mailbox<Integer> mailbox) {
-        return new MaildirFolder(getFolderName(mailbox), new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName()), locker);
+    public MaildirFolder getMaildirFolder(Mailbox<Integer> mailbox) throws MailboxException {
+        if (mailbox instanceof MaildirMailbox<?>) {
+            return ((MaildirMailbox<?>)mailbox).getMaildirFolder();
+        }
+        else {
+            throw new MailboxException("Unable to extract the "+ MaildirFolder.class.getName() +" out of a "+ (mailbox != null ? mailbox.getClass().getName() : "null") +"; expected "+ MaildirMailbox.class.getName());
+        }
     }
 
     /**
      * Creates a Mailbox object with data loaded from the file system
-     * @param root The main maildir folder containing the mailbox to load
-     * @param namespace The namespace to use
-     * @param user The owner of this mailbox
-     * @param folderName The name of the mailbox folder
-     * @return The Mailbox object populated with data from the file system
-     * @throws MailboxException If the mailbox folder doesn't exist or can't be read
-     */
-    public Mailbox<Integer> loadMailbox(MailboxSession session, File root, String namespace, String user, String folderName) throws MailboxException {
-        String mailboxName = getMailboxNameFromFolderName(folderName);
-        return loadMailbox(session, new File(root, folderName), new MailboxPath(namespace, user, mailboxName));
-    }
-
-    /**
-     * Creates a Mailbox object with data loaded from the file system
-     * @param mailboxPath The path of the mailbox
+     * @param mailboxName The path of the mailbox
      * @return The Mailbox object populated with data from the file system
      * @throws MailboxNotFoundException If the mailbox folder doesn't exist
      * @throws MailboxException If the mailbox folder can't be read
      */
-    public Mailbox<Integer> loadMailbox(MailboxSession session, MailboxPath mailboxPath)
+    public MaildirMailbox<Integer> loadMailbox(MailboxSession session, MailboxName mailboxName)
     throws MailboxNotFoundException, MailboxException {
-        MaildirFolder folder = new MaildirFolder(getFolderName(mailboxPath), mailboxPath, locker);
-
-        if (!folder.exists())
-            throw new MailboxNotFoundException(mailboxPath);
-        return loadMailbox(session, folder.getRootFile(), mailboxPath);
-    }
-
-    /**
-     * Creates a Mailbox object with data loaded from the file system
-     * @param mailboxFile File object referencing the folder for the mailbox
-     * @param mailboxPath The path of the mailbox
-     * @return The Mailbox object populated with data from the file system
-     * @throws MailboxException If the mailbox folder doesn't exist or can't be read
-     */
-    private Mailbox<Integer> loadMailbox(MailboxSession session, File mailboxFile, MailboxPath mailboxPath) throws MailboxException {
-        MaildirFolder folder = new MaildirFolder(mailboxFile.getAbsolutePath(), mailboxPath, locker);
-        try {
-            return new MaildirMailbox<Integer>(session, mailboxPath, folder);
-        } catch (IOException e) {
-            throw new MailboxException("Unable to load Mailbox " + mailboxPath, e);
+        MailboxNameResolver mailboxNameResolver = session.getMailboxNameResolver();
+        MailboxOwner owner = mailboxNameResolver.getOwner(mailboxName);
+        if (owner != null) {
+            File path = maildirLocator.locate(mailboxNameResolver, mailboxName, owner);
+            MaildirFolder folder = new MaildirFolder(path, mailboxName, locker);
+            if (folder.exists()) {
+                try {
+                    return new MaildirMailbox<Integer>(mailboxName, owner.getName(), owner.isGroup(), folder);
+                } catch (IOException e) {
+                    throw new MailboxException("Unable to load Mailbox " + mailboxName, e);
+                }
+            }
+            else {
+                throw new MailboxNotFoundException(mailboxName);
+            }
         }
+        throw new MailboxNotFoundException(mailboxName);
     }
-    
-    /**
-     * Inserts the user name parts in the general maildir location String
-     * @param user The user to get the root for.
-     * @return The name of the folder which contains the specified user's mailbox
-     */
-    public String userRoot(String user) {
-        String path = maildirLocation.replace(PATH_FULLUSER, user);
-        String[] userParts = user.split("@");
-        String userName = user;
-        if (userParts.length == 2) {
-            userName = userParts[0];
-            // At least the domain part should not handled in a case-sensitive manner
-            // See MAILBOX-58
-            path = path.replace(PATH_DOMAIN, userParts[1].toLowerCase(Locale.US));
-        }
-        path = path.replace(PATH_USER, userName);
-        return path;
-    }
-    
-    /**
-     * The main maildir folder containing all mailboxes for one user
-     * @param user The user name of a mailbox
-     * @return A File object referencing the main maildir folder
-     * @throws MailboxException If the folder does not exist or is no directory
-     */
-    public File getMailboxRootForUser(String user) throws MailboxException {
-        String path = userRoot(user);
-        File root = new File(path);
-        if (!root.isDirectory())
-            throw new MailboxException("Unable to load Mailbox for user " + user);
-        return root;
-    }
-    
-    /**
-     * Return a File which is the root of all Maidirs.
-     * The returned maidirRootFile is lazilly constructured.
-     * 
-     * @return maidirRootFile
-     */
-    public File getMaildirRoot() {
-        if (maildirRootFile == null) {
-            String maildirRootLocation = maildirLocation.replaceAll(PATH_FULLUSER, "");
-            maildirRootLocation = maildirRootLocation.replaceAll(PATH_DOMAIN, "");
-            maildirRootLocation = maildirRootLocation.replaceAll(PATH_USER, "");
-            maildirRootFile = new File(maildirRootLocation);
-        }        
-        return maildirRootFile;
-    }
+//
+//    /**
+//     * Creates a Mailbox object with data loaded from the file system
+//     * @param maildirPath File object referencing the folder for the mailbox
+//     * @param mailboxPath The path of the mailbox
+//     * @return The Mailbox object populated with data from the file system
+//     * @throws MailboxException If the mailbox folder doesn't exist or can't be read
+//     */
+//    private Mailbox<Integer> loadMailbox(MailboxSession session, MailboxName mailboxName, File maildirPath, String owner, boolean isOwnerGroup) throws MailboxException {
+//        MaildirFolder folder = new MaildirFolder(maildirPath, mailboxName, locker);
+//        try {
+//            return new MaildirMailbox<Integer>(session, mailboxName, owner, isOwnerGroup, folder);
+//        } catch (IOException e) {
+//            throw new MailboxException("Unable to load Mailbox " + mailboxName, e);
+//        }
+//    }
+//    
+//    /**
+//     * Inserts the user name parts in the general maildir location String
+//     * @param user The user to get the root for.
+//     * @return The name of the folder which contains the specified user's mailbox
+//     */
+//    public String userRoot(String user) {
+//        String path = maildirLocation.replace(PATH_FULLUSER, user);
+//        String[] userParts = user.split("@");
+//        String userName = user;
+//        if (userParts.length == 2) {
+//            userName = userParts[0];
+//            // At least the domain part should not handled in a case-sensitive manner
+//            // See MAILBOX-58
+//            path = path.replace(PATH_DOMAIN, userParts[1].toLowerCase(Locale.US));
+//        }
+//        path = path.replace(PATH_USER, userName);
+//        return path;
+//    }
+//    
+//    /**
+//     * The main maildir folder containing all mailboxes for one user
+//     * @param user The user name of a mailbox
+//     * @return A File object referencing the main maildir folder
+//     * @throws MailboxException If the folder does not exist or is no directory
+//     */
+//    public File getMailboxRootForUser(String user) throws MailboxException {
+//        String path = userRoot(user);
+//        File root = new File(path);
+//        if (!root.isDirectory())
+//            throw new MailboxException("Unable to load Mailbox for user " + user);
+//        return root;
+//    }
+//    
+//    /**
+//     * Return a File which is the root of all Maidirs.
+//     * The returned maidirRootFile is lazilly constructured.
+//     * 
+//     * @return maidirRootFile
+//     */
+//    public File getMaildirRoot() {
+//        if (maildirRootFile == null) {
+//            String maildirRootLocation = maildirLocation.replaceAll(PATH_FULLUSER, "");
+//            maildirRootLocation = maildirRootLocation.replaceAll(PATH_DOMAIN, "");
+//            maildirRootLocation = maildirRootLocation.replaceAll(PATH_USER, "");
+//            maildirRootFile = new File(maildirRootLocation);
+//        }        
+//        return maildirRootFile;
+//    }
 
-    /**
-     * Transforms a folder name into a mailbox name
-     * @param folderName The name of the mailbox folder
-     * @return The complete (namespace) name of a mailbox
-     */
-    public String getMailboxNameFromFolderName(String folderName) {
-        String mName;
-        if (folderName.equals("")) mName = MailboxConstants.INBOX;
-        else
-        // remove leading dot
-            mName = folderName.substring(1);
-        // they are equal, anyways, this might change someday...
-        //if (maildirDelimiter != MailboxConstants.DEFAULT_DELIMITER_STRING)
-        //    mName = mName.replace(maildirDelimiter, MailboxConstants.DEFAULT_DELIMITER_STRING);
-        return mName;
-    }
+//    /**
+//     * Transforms a folder name into a mailbox name
+//     * @param folderName The name of the mailbox folder
+//     * @return The complete (namespace) name of a mailbox
+//     */
+//    public String getMailboxNameFromFolderName(String folderName) {
+//        String mName;
+//        if (folderName.equals("")) {
+//            mName = MailboxConstants.INBOX;
+//        }
+//        else {
+//            // remove leading dot
+//            mName = folderName.substring(1);
+//            // they are equal, anyways, this might change someday...
+//            //if (maildirDelimiter != MailboxConstants.DEFAULT_DELIMITER_STRING)
+//            //    mName = mName.replace(maildirDelimiter, MailboxConstants.DEFAULT_DELIMITER_STRING);
+//        }
+//        return mName;
+//    }
+//    
+//    /**
+//     * Get the absolute name of the folder for a specific mailbox
+//     * @param namespace The namespace of the mailbox
+//     * @param user The user of the mailbox
+//     * @param name The name of the mailbox
+//     * @return absolute name
+//     */
+//    public String getFolderName(String namespace, String user, String name) {
+//        String root = userRoot(user);
+//        // if INBOX => location == maildirLocation
+//        if (name.equals(MailboxConstants.INBOX))
+//            return root;
+//        StringBuilder folder = new StringBuilder(root);
+//        if (!root.endsWith(File.pathSeparator))
+//            folder.append(File.separator);
+//        folder.append(".");
+//        folder.append(name);
+//        return folder.toString();
+//    }
+//    
     
-    /**
-     * Get the absolute name of the folder for a specific mailbox
-     * @param namespace The namespace of the mailbox
-     * @param user The user of the mailbox
-     * @param name The name of the mailbox
-     * @return absolute name
-     */
-    public String getFolderName(String namespace, String user, String name) {
-        String root = userRoot(user);
-        // if INBOX => location == maildirLocation
-        if (name.equals(MailboxConstants.INBOX))
-            return root;
-        StringBuilder folder = new StringBuilder(root);
-        if (!root.endsWith(File.pathSeparator))
-            folder.append(File.separator);
-        folder.append(".");
-        folder.append(name);
-        return folder.toString();
-    }
-    
-    /**
-     * Get the absolute name of the folder for a specific mailbox
-     * @param mailbox The mailbox
-     * @return The absolute path to the folder containing the mailbox
-     */
-    public String getFolderName(Mailbox<Integer> mailbox) {
-        return getFolderName(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName());
-    }
-    
-    /**
-     * Get the absolute name of the folder for a specific mailbox
-     * @param mailboxPath The MailboxPath
-     * @return The absolute path to the folder containing the mailbox
-     */
-    public String getFolderName(MailboxPath mailboxPath) {
-        return getFolderName(mailboxPath.getNamespace(), mailboxPath.getUser(), mailboxPath.getName());
-    }
+//    
+//    /**
+//     * Get the absolute name of the folder for a specific mailbox
+//     * @param mailbox The mailbox
+//     * @return The absolute path to the folder containing the mailbox
+//     */
+//    public String getFolderName(Mailbox<Integer> mailbox) {
+//        return getFolderName(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName());
+//    }
+//    
+//    /**
+//     * Get the absolute name of the folder for a specific mailbox
+//     * @param mailboxPath The MailboxPath
+//     * @return The absolute path to the folder containing the mailbox
+//     */
+//    public String getFolderName(MailboxPath mailboxPath) {
+//        return getFolderName(mailboxPath.getNamespace(), mailboxPath.getUser(), mailboxPath.getName());
+//    }
 
     /**
      * @see org.apache.james.mailbox.store.mail.UidProvider#nextUid(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.store.mail.model.Mailbox)
      */
     @Override
     public long nextUid(MailboxSession session, Mailbox<Integer> mailbox) throws MailboxException {
-        try {
-            return createMaildirFolder(mailbox).getLastUid(session) +1;
-        } catch (MailboxException e) {
-            throw new MailboxException("Unable to generate next uid", e);
-        }
+        return getMaildirFolder(mailbox).getLastUid(session) +1;
     }
 
     @Override
@@ -251,7 +290,7 @@ public class MaildirStore implements UidProvider<Integer>, ModSeqProvider<Intege
     @Override
     public long highestModSeq(MailboxSession session, Mailbox<Integer> mailbox) throws MailboxException {
         try {
-            return createMaildirFolder(mailbox).getHighestModSeq();
+            return getMaildirFolder(mailbox).getHighestModSeq();
         } catch (IOException e) {
             throw new MailboxException("Unable to get highest mod-sequence for mailbox", e);
         }
@@ -259,6 +298,11 @@ public class MaildirStore implements UidProvider<Integer>, ModSeqProvider<Intege
 
     @Override
     public long lastUid(MailboxSession session, Mailbox<Integer> mailbox) throws MailboxException {
-       return createMaildirFolder(mailbox).getLastUid(session);
+       return getMaildirFolder(mailbox).getLastUid(session);
     }
+
+    public MaildirLocator getMaildirLocator() {
+        return maildirLocator;
+    }
+    
 }

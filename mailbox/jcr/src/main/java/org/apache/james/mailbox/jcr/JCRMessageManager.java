@@ -47,7 +47,7 @@ public class JCRMessageManager extends StoreMessageManager<String> {
     private final Logger log;
 
     public JCRMessageManager(MailboxSessionMapperFactory<String> mapperFactory, MessageSearchIndex<String> index, 
-            final MailboxEventDispatcher<String> dispatcher, final MailboxPathLocker locker, final JCRMailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, final Logger log, final char delimiter) throws MailboxException {
+            final MailboxEventDispatcher<String> dispatcher, final MailboxPathLocker locker, final JCRMailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, final Logger log) throws MailboxException {
         super(mapperFactory, index, dispatcher, locker, mailbox, aclResolver, groupMembershipResolver);
         this.log = log;
     }

@@ -28,6 +28,7 @@ import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * 
@@ -38,13 +39,12 @@ import org.apache.james.mailbox.model.MailboxPath;
  */
 public final class JVMMailboxPathLocker extends AbstractMailboxPathLocker {
 
-    private final ConcurrentHashMap<MailboxPath, ReadWriteLock> paths = new ConcurrentHashMap<MailboxPath, ReadWriteLock>();
-
+    private final ConcurrentHashMap<MailboxName, ReadWriteLock> paths = new ConcurrentHashMap<MailboxName, ReadWriteLock>();
 
     /**
      * @see org.apache.james.mailbox.store.AbstractMailboxPathLocker#lock(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.model.MailboxPath, boolean)
      */
-    protected void lock(MailboxSession session, MailboxPath path, boolean writeLock) throws MailboxException {
+    protected void lock(MailboxSession session, MailboxName path, boolean writeLock) throws MailboxException {
         ReadWriteLock lock = paths.get(path);
         if (lock == null) {
             lock = new ReentrantReadWriteLock();
@@ -59,7 +59,7 @@ public final class JVMMailboxPathLocker extends AbstractMailboxPathLocker {
     /**
      * @see org.apache.james.mailbox.store.AbstractMailboxPathLocker#unlock(MailboxSession, MailboxPath, boolean)
      */
-    protected void unlock(MailboxSession session, MailboxPath path, boolean writeLock) throws MailboxException {
+    protected void unlock(MailboxSession session, MailboxName path, boolean writeLock) throws MailboxException {
         ReadWriteLock lock = paths.get(path);
         
         if (lock != null) {

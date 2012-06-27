@@ -31,8 +31,9 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.transport.util.MailetContextLog;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
@@ -49,7 +50,8 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
     private UsersRepository usersRepos;
     private MailboxManager mailboxManager;
     private FileSystem fileSystem;
-    private String folder;
+    private MailboxName folder;
+    private final MailboxNameCodec mailboxNameCodec;
 
     @Resource(name = "usersrepository")
     public void setUsersRepository(UsersRepository usersRepos) {
@@ -66,12 +68,13 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
         this.fileSystem = fileSystem;
     }
     
-    public void setFolder(String folder) {
+    public void setFolder(MailboxName folder) {
         this.folder = folder;
     }
     
     public SieveMailet() {
         super();
+        this.mailboxNameCodec = MailboxNameCodec.SIEVE_NAME_CODEC;
     }
 
     /* (non-Javadoc)
@@ -154,12 +157,14 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
                     final int startOfHost = endOfUser + 1;
                     final int endOfHost = url.indexOf('/', startOfHost);
                     final String host = url.substring(startOfHost, endOfHost);
-                    final String urlPath;
+                    ;
                     final int length = url.length();
+                    final MailboxName destinationName;
                     if (endOfHost + 1 == length) {
-                        urlPath = this.folder;
+                        destinationName = this.folder;
                     } else {
-                        urlPath = url.substring(endOfHost, length);
+                        final String urlPath = url.substring(endOfHost, length);
+                        destinationName = mailboxNameCodec.decode(urlPath, true);
                     }
 
                     // Check if we should use the full email address as username
@@ -182,24 +187,12 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
 
                     // Start processing request
                     mailboxManager.startProcessingRequest(session);
-
-                    // This allows Sieve scripts to use a standard delimiter
-                    // regardless of mailbox implementation
-                    String destination = urlPath.replace('/', session.getPathDelimiter());
-
-                    if (destination == null || "".equals(destination)) {
-                        destination = this.folder;
-                    }
-                    if (destination.startsWith(session.getPathDelimiter() + ""))
-                        destination = destination.substring(1);
                     
-                    // Use the MailboxSession to construct the MailboxPath - See JAMES-1326
-                    final MailboxPath path = new MailboxPath(MailboxConstants.USER_NAMESPACE, user, this.folder);
                     try {
-                        if (this.folder.equalsIgnoreCase(destination) && !(mailboxManager.mailboxExists(path, session))) {
-                            mailboxManager.createMailbox(path, session);
+                        if (this.folder.equals(destinationName) && !(mailboxManager.mailboxExists(this.folder, session))) {
+                            mailboxManager.createMailbox(this.folder, session);
                         }
-                        final MessageManager mailbox = mailboxManager.getMailbox(path, session);
+                        final MessageManager mailbox = mailboxManager.getMailbox(this.folder, session);
                         if (mailbox == null) {
                             final String error = "Mailbox for user " + user + " was not found on this server.";
                             throw new MessagingException(error);

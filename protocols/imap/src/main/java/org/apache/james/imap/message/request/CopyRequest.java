@@ -21,6 +21,7 @@ package org.apache.james.imap.message.request;
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.message.request.ImapRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * {@link ImapRequest} which request the copy of messages
@@ -29,11 +30,11 @@ public class CopyRequest extends AbstractImapRequest {
 
     private final IdRange[] idSet;
 
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
 
     private final boolean useUids;
 
-    public CopyRequest(final ImapCommand command, final IdRange[] idSet, final String mailboxName, final boolean useUids, final String tag) {
+    public CopyRequest(final ImapCommand command, final IdRange[] idSet, final UnresolvedMailboxName mailboxName, final boolean useUids, final String tag) {
         super(tag, command);
         this.idSet = idSet;
         this.mailboxName = mailboxName;
@@ -54,7 +55,7 @@ public class CopyRequest extends AbstractImapRequest {
      * 
      * @return mailbox
      */
-    public final String getMailboxName() {
+    public final UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 

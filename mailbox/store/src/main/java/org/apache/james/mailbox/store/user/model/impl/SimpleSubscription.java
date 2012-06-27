@@ -18,14 +18,15 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.user.model.impl;
 
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.user.model.Subscription;
 
 public class SimpleSubscription implements Subscription {
 
     private final String user;
-    private final String mailbox;
+    private final MailboxName mailbox;
     
-    public SimpleSubscription(String user, String mailbox) {
+    public SimpleSubscription(String user, MailboxName mailbox) {
         this.user = user;
         this.mailbox = mailbox;
     }
@@ -33,7 +34,7 @@ public class SimpleSubscription implements Subscription {
     /**
      * @see org.apache.james.mailbox.store.user.model.Subscription#getMailbox()
      */
-    public String getMailbox() {
+    public MailboxName getMailbox() {
         return mailbox;
     }
 

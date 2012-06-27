@@ -18,7 +18,18 @@
  ****************************************************************/
 package org.apache.james.mailbox.hbase;
 
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOXES_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_META_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_DATA_BODY_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_DATA_HEADERS_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTIONS_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
+
+import java.io.IOException;
 import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -26,13 +37,12 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.james.mailbox.MailboxSession;
-import static org.apache.james.mailbox.hbase.HBaseNames.*;
-
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.hbase.mail.HBaseMailboxMapper;
 import org.apache.james.mailbox.hbase.mail.HBaseMessageMapper;
 import org.apache.james.mailbox.hbase.user.HBaseSubscriptionMapper;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
@@ -49,6 +59,7 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
     private final Configuration conf;
     private final UidProvider<UUID> uidProvider;
     private final ModSeqProvider<UUID> modSeqProvider;
+    private final MailboxNameCodec mailboxNameCodec;
 
     /**
      * Creates  the necessary tables in HBase if they do not exist.
@@ -64,6 +75,7 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
         this.conf = conf;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
+        this.mailboxNameCodec = MailboxNameCodec.SAFE_STORE_NAME_CODEC;
 
         //TODO: add better exception handling for this
         try {
@@ -120,12 +132,12 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
 
     @Override
     protected MailboxMapper<UUID> createMailboxMapper(MailboxSession session) throws MailboxException {
-        return new HBaseMailboxMapper(this.conf);
+        return new HBaseMailboxMapper(this.conf, session.getMailboxNameResolver(), mailboxNameCodec);
     }
 
     @Override
     protected SubscriptionMapper createSubscriptionMapper(MailboxSession session) throws SubscriptionException {
-        return new HBaseSubscriptionMapper(this.conf);
+        return new HBaseSubscriptionMapper(this.conf, mailboxNameCodec);
     }
 
     /**

@@ -18,14 +18,15 @@
  ****************************************************************/
 package org.apache.james.imap.processor;
 
-import java.util.List;
 import static org.apache.james.imap.api.ImapConstants.SUPPORTS_XLIST;
+
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
-
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
@@ -35,6 +36,7 @@ import org.apache.james.imap.message.request.ListRequest;
 import org.apache.james.imap.message.request.XListRequest;
 import org.apache.james.imap.message.response.XListResponse;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * Processes XLIST command
@@ -71,13 +73,11 @@ public class XListProcessor extends ListProcessor implements CapabilityImplement
     @Override
     protected void doProcess(ListRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
         final XListRequest request = (XListRequest) message;
-        final String baseReferenceName = request.getBaseReferenceName();
-        final String mailboxPatternString = request.getMailboxPattern();
-        doProcess(baseReferenceName, mailboxPatternString, session, tag, command, responder, mailboxTyper);
+        doProcess(request.getBaseReferenceName(), request.getMailboxPattern(), session, tag, command, responder, mailboxTyper);
     }
 
     @Override
-    protected ImapResponseMessage createResponse(boolean noInferior, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String mailboxName, char delimiter, MailboxType type) {
+    protected ImapResponseMessage createResponse(boolean noInferior, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, UnresolvedMailboxName mailboxName, char delimiter, MailboxType type) {
         return new XListResponse(noInferior, noSelect, marked, unmarked, hasChildren, hasNoChildren, mailboxName, delimiter, type);
     }
 }

@@ -27,7 +27,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.pop3server.mailbox.MailboxAdapter;
 import org.apache.james.protocols.api.Request;
 import org.apache.james.protocols.api.Response;
@@ -68,13 +68,13 @@ public class PassCmdHandler extends AbstractPassCmdHandler  {
         try {
             mSession = manager.login(session.getUser(), password, new Slf4jLoggerAdapter(session.getLogger()));
             manager.startProcessingRequest(mSession);
-            MailboxPath inbox = MailboxPath.inbox(mSession);
+            MailboxName inbox = mSession.getMailboxNameResolver().getInbox(mSession.getOwner());
             
             // check if the mailbox exists, if not create it
             if (!manager.mailboxExists(inbox, mSession)) {
                 manager.createMailbox(inbox, mSession);
             }
-            MessageManager mailbox = manager.getMailbox(MailboxPath.inbox(mSession), mSession);
+            MessageManager mailbox = manager.getMailbox(inbox, mSession);
             return new MailboxAdapter(manager, mailbox, mSession);
         } catch (BadCredentialsException e) {
             return null;

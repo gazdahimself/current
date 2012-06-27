@@ -30,6 +30,7 @@ import org.apache.commons.collections.iterators.IteratorChain;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailetConfig;
@@ -139,7 +140,7 @@ public class LocalDelivery extends GenericMailet {
         });
         // Override the default value of "quiet"
         sieveMailet.setQuiet(getInitParameter("quiet", true));
-        sieveMailet.setFolder("INBOX");
+        sieveMailet.setFolder(MailboxConstants.INBOX);
         
     }
 

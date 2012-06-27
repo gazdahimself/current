@@ -18,20 +18,29 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir.user;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.maildir.MaildirStore;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
+import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.transaction.NonTransactionalMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.model.Subscription;
@@ -39,11 +48,17 @@ import org.apache.james.mailbox.store.user.model.impl.SimpleSubscription;
 
 public class MaildirSubscriptionMapper extends NonTransactionalMapper implements SubscriptionMapper {
 
-    private static final String FILE_SUBSCRIPTION = "subscriptions";
-    private MaildirStore store;
-    
-    public MaildirSubscriptionMapper(MaildirStore store) {
+    private static final String SUBSCRIPTION_FILE = "subscriptions";
+    private static final String SUBSCRIPTION_FILE_ENCODING = "utf-8";
+    private static final char EOL = '\n';
+    private final MaildirStore store;
+    private final MailboxNameCodec mailboxNameCodec;
+    private final MailboxSession session;
+
+    public MaildirSubscriptionMapper(MaildirStore store, MailboxSession session) {
         this.store = store;
+        this.session = session;
+        this.mailboxNameCodec = MailboxNameCodec.SAFE_STORE_NAME_CODEC;
     }
     
     /**
@@ -51,12 +66,20 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
      */
     @Override
     public void delete(Subscription subscription) throws SubscriptionException {
-     // TODO: we need some kind of file locking here
-        Set<String> subscriptionNames = readSubscriptionsForUser(subscription.getUser());
+        String user = subscription.getUser();
+        final MailboxOwner owner;
+        if (user.equals(session.getUser().getUserName())) {
+            owner = session.getOwner();
+        }
+        else {
+            owner = session.getMailboxNameResolver().getOwner(user, false);
+        }
+        // TODO: we need some kind of file locking here
+        Set<MailboxName> subscriptionNames = readSubscriptionsForUser(owner);
         boolean changed = subscriptionNames.remove(subscription.getMailbox());
         if (changed) {
             try {
-                writeSubscriptions(new File(store.userRoot(subscription.getUser())), subscriptionNames);
+                writeSubscriptions(store.getMaildirLocator().getInbox(session.getMailboxNameResolver().getOwner(subscription.getUser(), false)), subscriptionNames);
             } catch (IOException e) {
                 throw new SubscriptionException(e);
             }
@@ -67,29 +90,28 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser(java.lang.String)
      */
     @Override
-    public List<Subscription> findSubscriptionsForUser(String user) throws SubscriptionException {
-        Set<String> subscriptionNames = readSubscriptionsForUser(user);
+    public List<Subscription> findSubscriptionsForUser(MailboxOwner owner) throws SubscriptionException {
+        Set<MailboxName> subscriptionNames = readSubscriptionsForUser(owner);
         ArrayList<Subscription> subscriptions = new ArrayList<Subscription>();
-        for (String subscription : subscriptionNames) {
-            subscriptions.add(new SimpleSubscription(user, subscription));
+        for (MailboxName subscription : subscriptionNames) {
+            subscriptions.add(new SimpleSubscription(owner.getName(), subscription));
         }
-        return subscriptions;
+        return Collections.unmodifiableList(subscriptions);
     }
 
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String, java.lang.String)
      */
     @Override
-    public Subscription findMailboxSubscriptionForUser(String user, String mailbox) throws SubscriptionException {
-        File userRoot = new File(store.userRoot(user));
-        Set<String> subscriptionNames;
+    public Subscription findMailboxSubscriptionForUser(MailboxOwner owner, MailboxName mailbox) throws SubscriptionException {
         try {
-            subscriptionNames = readSubscriptions(userRoot);
+            Set<MailboxName> subscriptionNames = readSubscriptions(store.getMaildirLocator().getInbox(owner));
+            if (subscriptionNames.contains(mailbox)) {
+                return new SimpleSubscription(owner.getName(), mailbox);
+            }
         } catch (IOException e) {
             throw new SubscriptionException(e);
         }
-        if (subscriptionNames.contains(mailbox))
-            return new SimpleSubscription(user, mailbox);
         return null;
     }
 
@@ -99,11 +121,19 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
     @Override
     public void save(Subscription subscription) throws SubscriptionException {
         // TODO: we need some kind of file locking here
-        Set<String> subscriptionNames = readSubscriptionsForUser(subscription.getUser());
+        String user = subscription.getUser();
+        final MailboxOwner owner;
+        if (user.equals(session.getUser().getUserName())) {
+            owner = session.getOwner();
+        }
+        else {
+            owner = session.getMailboxNameResolver().getOwner(user, false);
+        }
+        Set<MailboxName> subscriptionNames = readSubscriptionsForUser(owner);
         boolean changed = subscriptionNames.add(subscription.getMailbox());
         if (changed) {
             try {
-                writeSubscriptions(new File(store.userRoot(subscription.getUser())), subscriptionNames);
+                writeSubscriptions(store.getMaildirLocator().getInbox(session.getMailboxNameResolver().getOwner(subscription.getUser(), false)), subscriptionNames);
             } catch (IOException e) {
                 throw new SubscriptionException(e);
             }
@@ -125,15 +155,12 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
      * @return A Set of names of subscribed mailboxes of the user
      * @throws SubscriptionException
      */
-    private Set<String> readSubscriptionsForUser(String user) throws SubscriptionException { 
-        File userRoot = new File(store.userRoot(user));
-        Set<String> subscriptionNames;
+    private Set<MailboxName> readSubscriptionsForUser(MailboxOwner owner) throws SubscriptionException { 
         try {
-            subscriptionNames = readSubscriptions(userRoot);
+            return readSubscriptions(store.getMaildirLocator().getInbox(owner));
         } catch (IOException e) {
             throw new SubscriptionException(e);
         }
-        return subscriptionNames;
     }
 
     /**
@@ -142,21 +169,34 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
      * @return A Set of names of subscribed mailboxes
      * @throws IOException
      */
-    private Set<String> readSubscriptions(File mailboxFolder) throws IOException {
-        File subscriptionFile = new File(mailboxFolder, FILE_SUBSCRIPTION);
-        HashSet<String> subscriptions = new HashSet<String>();
-        if (!subscriptionFile.exists()) {
+    private Set<MailboxName> readSubscriptions(File mailboxFolder) throws IOException {
+        
+        if (mailboxFolder.exists()) {
+            File subscriptionFile = new File(mailboxFolder, SUBSCRIPTION_FILE);
+            Set<MailboxName> subscriptions = new LinkedHashSet<MailboxName>(StoreMailboxManager.estimateMailboxCountPerUser());
+            if (!subscriptionFile.exists()) {
+                return subscriptions;
+            }
+            BufferedReader in = null;
+            try {
+                in = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(subscriptionFile)), SUBSCRIPTION_FILE_ENCODING));
+                String line = null;
+                while ((line = in.readLine()) != null) {
+                    subscriptions.add(mailboxNameCodec.decode(line, true));
+                }
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
             return subscriptions;
         }
-        FileReader fileReader = new FileReader(subscriptionFile);
-        BufferedReader reader = new BufferedReader(fileReader);
-        String subscription;
-        while ((subscription = reader.readLine()) != null)
-            if (!subscription.equals(""))
-                subscriptions.add(subscription);
-        reader.close();
-        fileReader.close();
-        return subscriptions;
+        else {
+            return new HashSet<MailboxName>(4);
+        }
     }
     
     /**
@@ -165,24 +205,36 @@ public class MaildirSubscriptionMapper extends NonTransactionalMapper implements
      * @param subscriptions Set of names of subscribed mailboxes
      * @throws IOException
      */
-    private void writeSubscriptions(File mailboxFolder, final Set<String> subscriptions) throws IOException {
-        List<String> sortedSubscriptions = new ArrayList<String>(subscriptions);
+    private void writeSubscriptions(File mailboxFolder, final Set<MailboxName> subscriptions) throws IOException {
+        List<MailboxName> sortedSubscriptions = new ArrayList<MailboxName>(subscriptions);
         Collections.sort(sortedSubscriptions);
-        if (!mailboxFolder.exists())
-            if (!mailboxFolder.mkdirs())
+        if (!mailboxFolder.exists()) {
+            if (!mailboxFolder.mkdirs()) {
                 throw new IOException("Could not create folder " + mailboxFolder);
+            }
+        }
         
-        File subscriptionFile = new File(mailboxFolder, FILE_SUBSCRIPTION);
-        if (!subscriptionFile.exists())
-            if (!subscriptionFile.createNewFile())
+        File subscriptionFile = new File(mailboxFolder, SUBSCRIPTION_FILE);
+        if (!subscriptionFile.exists()) {
+            if (!subscriptionFile.createNewFile()) {
                 throw new IOException("Could not create file " + subscriptionFile);
-                
-        FileWriter fileWriter = new FileWriter(subscriptionFile);
-        PrintWriter writer = new PrintWriter(fileWriter);
-        for (String subscription : sortedSubscriptions)
-            writer.println(subscription);
-        writer.close();
-        fileWriter.close();
+            }
+        }
+        OutputStreamWriter out = null;
+        try {
+            out = new OutputStreamWriter(new BufferedOutputStream(new FileOutputStream(subscriptionFile)), SUBSCRIPTION_FILE_ENCODING);
+            for (MailboxName subscription : sortedSubscriptions) {
+                out.write(mailboxNameCodec.encode(subscription));
+                out.write(EOL);
+            }
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (Throwable ignored) {
+                }
+            }
+        }
     }
 
 }

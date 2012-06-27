@@ -25,7 +25,8 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.JPAMailboxMapper;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -42,8 +43,9 @@ public abstract class JPAMailboxManager extends StoreMailboxManager<Long> {
     }
     
     @Override
-    protected Mailbox<Long> doCreateMailbox(MailboxPath path, MailboxSession session) throws MailboxException {
-        return  new JPAMailbox(path, randomUidValidity());
+    protected Mailbox<Long> doCreateMailbox(MailboxName path, MailboxOwner owner, MailboxSession session) throws MailboxException {
+        final JPAMailboxMapper mapper = (JPAMailboxMapper) getMapperFactory().getMailboxMapper(session);
+        return  new JPAMailbox(path, mapper.getMailboxNameCodec(), owner.getName(), owner.isGroup(), randomUidValidity(), mapper.getMailboxAclCodec());
     }
 
     /**

@@ -29,6 +29,8 @@ import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.slf4j.Logger;
 
 /**
@@ -67,13 +69,6 @@ import org.slf4j.Logger;
 public interface MailboxManager extends RequestAware, MailboxListenerSupport {
 
     /**
-     * Return the delimiter to use for folders
-     * 
-     * @return delimiter
-     */
-    char getDelimiter();
-
-    /**
      * Gets an session suitable for IMAP.
      * 
      * @param mailboxPath
@@ -86,7 +81,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @throws MailboxNotFoundException
      *             when the given mailbox does not exist
      */
-    MessageManager getMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+    MessageManager getMailbox(MailboxName mailboxPath, MailboxSession session) throws MailboxException;
 
     /**
      * Creates a new mailbox. Any intermediary mailboxes missing from the
@@ -98,7 +93,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @throws MailboxException
      *             when creation fails
      */
-    void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException;
+    void createMailbox(MailboxName mailboxPath, MailboxSession mailboxSession) throws MailboxException;
 
     /**
      * Delete the mailbox with the name
@@ -107,7 +102,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @param session
      * @throws MailboxException
      */
-    void deleteMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+    void deleteMailbox(MailboxName mailboxPath, MailboxSession session) throws MailboxException;
 
     /**
      * Renames a mailbox.
@@ -125,10 +120,10 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @throws MailboxNotFound
      *             when the <code>from</code> mailbox does not exist
      */
-    void renameMailbox(MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException;
+    void renameMailbox(MailboxName from, MailboxName to, MailboxSession session) throws MailboxException;
 
     /**
-     * Copy the given {@link MessageRange} from one Mailbox to the other. 
+     * Copy the given {@link MessageRange} from one Mailbox to the other.
      * 
      * Be aware that the copied Messages MUST get the \RECENT flag set!
      * 
@@ -142,15 +137,15 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      *            <code>MailboxSession</code>, not null
      * @return a list of MessageRange - uids assigned to copied messages
      */
-    List<MessageRange> copyMessages(MessageRange set, MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException;
+    List<MessageRange> copyMessages(MessageRange set, MailboxName from, MailboxName to, MailboxSession session) throws MailboxException;
 
     /**
-     * Searches for mailboxes matching the given query.
+     * Searches for mailboxes matching the given query. The returned
+     * {@link List} should be sorted current user' folders first.
      * 
      * @param expression
-     *            not null
      * @param session
-     *            the context for this call, not null
+     * @return
      * @throws MailboxException
      */
     List<MailboxMetaData> search(MailboxQuery expression, MailboxSession session) throws MailboxException;
@@ -166,7 +161,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      *         user, false otherwise
      * @throws MailboxException
      */
-    boolean mailboxExists(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+    boolean mailboxExists(MailboxName mailboxPath, MailboxSession session) throws MailboxException;
 
     /**
      * Creates a new system session.<br>
@@ -238,6 +233,13 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @return pathList
      * @throws MailboxException
      */
-    List<MailboxPath> list(MailboxSession session) throws MailboxException;
+    List<MailboxName> list(MailboxSession session) throws MailboxException;
+    
+    /**
+     * TODO getMailboxNameResolver.
+     *
+     * @return
+     */
+    MailboxNameResolver getMailboxNameResolver();
 
 }

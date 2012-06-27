@@ -23,6 +23,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * The {@link MailboxPathLocker} is responsible to help to synchronize the
@@ -36,7 +37,7 @@ public interface MailboxPathLocker {
      * @deprecated use {@link #executeWithLock(MailboxSession, MailboxPath, LockAwareExecution, boolean)} with argument <code>true</code>
      */
     @Deprecated
-    public <T> T executeWithLock(MailboxSession session, MailboxPath path, LockAwareExecution<T> execution) throws MailboxException;
+    public <T> T executeWithLock(MailboxSession session, MailboxName path, LockAwareExecution<T> execution) throws MailboxException;
 
     
     /**
@@ -51,7 +52,7 @@ public interface MailboxPathLocker {
      * 
      * @throws MailboxException
      */
-    public <T> T executeWithLock(MailboxSession session, MailboxPath path, LockAwareExecution<T> execution, boolean writeLock) throws MailboxException;
+    public <T> T executeWithLock(MailboxSession session, MailboxName path, LockAwareExecution<T> execution, boolean writeLock) throws MailboxException;
 
     /**
      * Execute code while holding a lock

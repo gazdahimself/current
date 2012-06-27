@@ -19,7 +19,10 @@
 
 package org.apache.james.mailbox.store;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -28,12 +31,13 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.acl.MailboxACL;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.MailboxEventDispatcher;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.util.EventCollector;
 import org.jmock.Expectations;
@@ -54,7 +58,7 @@ public class MailboxEventDispatcherFlagsTest {
     MessageResult result;
     int sessionId = 10;
 
-    private MailboxSession session = new MockMailboxSession("test") {
+    private MailboxSession session = new MockMailboxSession("test", DefaultMailboxNameResolver.INSTANCE) {
 
         @Override
         public long getSessionId() {
@@ -66,6 +70,8 @@ public class MailboxEventDispatcherFlagsTest {
     private Mockery mockery = new JUnit4Mockery();
 
     private Mailbox<Long> mailbox = new Mailbox<Long>() {
+        
+        private MailboxName mailboxName = new MailboxNameBuilder(2).add("#users").add("test").qualified(true);
 
         @Override
         public Long getMailboxId() {
@@ -73,31 +79,13 @@ public class MailboxEventDispatcherFlagsTest {
         }
 
         @Override
-        public String getNamespace() {
-            return null;
-        }
-
-        @Override
-        public void setNamespace(String namespace) {            
-        }
-
-        @Override
         public String getUser() {
-            return null;
+            throw new UnsupportedOperationException("Not supported");
         }
 
         @Override
         public void setUser(String user) {
-            
-        }
-
-        @Override
-        public String getName() {
-            return "test";
-        }
-
-        @Override
-        public void setName(String name) {
+            throw new UnsupportedOperationException("Not supported");
         }
 
         @Override
@@ -107,13 +95,35 @@ public class MailboxEventDispatcherFlagsTest {
         
         @Override
         public MailboxACL getACL() {
-            return SimpleMailboxACL.EMPTY;
+            throw new UnsupportedOperationException("Not supported");
         }
 
         @Override
         public void setACL(MailboxACL acl) {
+            throw new UnsupportedOperationException("Not supported");
         }
 
+        @Override
+        public MailboxName getMailboxName() {
+            return mailboxName;
+        }
+
+        @Override
+        public void setMailboxName(MailboxName mailboxName) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
+        public boolean isOwnerGroup() {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
+        public void setOwnerGroup(boolean ownerGroup) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        
     };
     
     @Before

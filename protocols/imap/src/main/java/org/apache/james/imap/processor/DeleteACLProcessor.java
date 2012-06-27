@@ -33,13 +33,15 @@ import org.apache.james.imap.message.request.DeleteACLRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.acl.MailboxACL.EditMode;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.slf4j.Logger;
 
 /**
@@ -56,15 +58,16 @@ public class DeleteACLProcessor extends AbstractMailboxProcessor<DeleteACLReques
     }
 
     @Override
-    protected void doProcess(DeleteACLRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
+    protected void doProcess(DeleteACLRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
 
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final String mailboxName = message.getMailboxName();
-        final String identifier = message.getIdentifier();
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final MailboxName mailboxPath = nameResolver.resolve(request.getMailboxName(), mailboxSession.getUser().getUserName());
+        final String identifier = request.getIdentifier();
         try {
             
-            MessageManager messageManager = mailboxManager.getMailbox(buildFullPath(session, mailboxName), mailboxSession);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
 
             /*
              * RFC 4314 section 6.
@@ -84,7 +87,7 @@ public class DeleteACLProcessor extends AbstractMailboxProcessor<DeleteACLReques
                 Object[] params = new Object[] {
                         Rfc4314Rights.a_Administer_RIGHT.toString(),
                         command.getName(),
-                        mailboxName
+                        session.getMailboxNameCodec().encode(request.getMailboxName())
                 };
                 HumanReadableText text = new HumanReadableText(HumanReadableText.UNSUFFICIENT_RIGHTS_KEY, HumanReadableText.UNSUFFICIENT_RIGHTS_DEFAULT_VALUE, params);
                 no(command, tag, responder, text);
@@ -123,7 +126,7 @@ public class DeleteACLProcessor extends AbstractMailboxProcessor<DeleteACLReques
         } catch (MailboxException e) {
             Logger log = session.getLog();
             if (log.isInfoEnabled()) {
-                log.info(command.getName() +" failed for mailbox " + mailboxName, e);
+                log.info(command.getName() +" failed for mailbox " + mailboxPath, e);
             }
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }

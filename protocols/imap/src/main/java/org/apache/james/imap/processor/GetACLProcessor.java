@@ -36,9 +36,12 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.slf4j.Logger;
 
 /**
@@ -54,14 +57,16 @@ public class GetACLProcessor extends AbstractMailboxProcessor<GetACLRequest> imp
     }
 
     @Override
-    protected void doProcess(GetACLRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
+    protected void doProcess(GetACLRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
 
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final String mailboxName = message.getMailboxName();
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
+        final MailboxName mailboxPath = nameResolver.resolve(mailboxName, mailboxSession.getUser().getUserName());
         try {
 
-            MessageManager messageManager = mailboxManager.getMailbox(buildFullPath(session, mailboxName), mailboxSession);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
 
             /*
              * RFC 4314 section 6.
@@ -81,7 +86,7 @@ public class GetACLProcessor extends AbstractMailboxProcessor<GetACLRequest> imp
                 Object[] params = new Object[] {
                         Rfc4314Rights.a_Administer_RIGHT.toString(),
                         command.getName(),
-                        mailboxName
+                        session.getMailboxNameCodec().encode(mailboxName)
                 };
                 HumanReadableText text = new HumanReadableText(HumanReadableText.UNSUFFICIENT_RIGHTS_KEY, HumanReadableText.UNSUFFICIENT_RIGHTS_DEFAULT_VALUE, params);
                 no(command, tag, responder, text);

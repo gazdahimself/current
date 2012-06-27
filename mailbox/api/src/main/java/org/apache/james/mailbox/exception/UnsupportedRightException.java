@@ -20,7 +20,7 @@
 
 package org.apache.james.mailbox.exception;
 
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight;
 
 /**
  * Thrown when the current system does not support the given right.

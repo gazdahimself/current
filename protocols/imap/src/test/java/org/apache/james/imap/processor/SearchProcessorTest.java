@@ -49,11 +49,12 @@ import org.apache.james.imap.message.response.SearchResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.MailboxName;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -94,7 +95,7 @@ public class SearchProcessorTest {
             new SearchQuery.NumericRange(1),
             new SearchQuery.NumericRange(42, 1048) };
     
-    private static final MailboxPath mailboxPath = new MailboxPath("namespace", "user", "name");
+    private static final MailboxName MAILBOX_NAME = new MailboxNameBuilder(2).add("users").add("user1").qualified(true);
 
     SearchProcessor processor;
 
@@ -206,12 +207,12 @@ public class SearchProcessorTest {
 
     private void expectsGetSelectedMailbox() throws Exception {
         mockery.checking(new Expectations() {{
-            atMost(1).of(mailboxManager).getMailbox(with(equal(mailboxPath)),  with(same(mailboxSession)));will(returnValue(mailbox));
-            atMost(1).of(mailboxManager).getMailbox(with(equal(mailboxPath)), with(same(mailboxSession)));will(returnValue(mailbox));
+            atMost(1).of(mailboxManager).getMailbox(with(equal(MAILBOX_NAME)),  with(same(mailboxSession)));will(returnValue(mailbox));
+            atMost(1).of(mailboxManager).getMailbox(with(equal(MAILBOX_NAME)), with(same(mailboxSession)));will(returnValue(mailbox));
             allowing(session).getSelected();will(returnValue(selectedMailbox));
             atMost(1).of(selectedMailbox).isRecentUidRemoved();will(returnValue(false));
             atLeast(1).of(selectedMailbox).isSizeChanged();will(returnValue(false));
-            atLeast(1).of(selectedMailbox).getPath();will(returnValue(mailboxPath));
+            atLeast(1).of(selectedMailbox).getPath();will(returnValue(MAILBOX_NAME));
             atMost(1).of(selectedMailbox).flagUpdateUids();will(returnValue(Collections.EMPTY_LIST));
             atMost(1).of(selectedMailbox).resetEvents();
             

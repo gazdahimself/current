@@ -20,12 +20,10 @@
 
 package org.apache.james.mailbox.acl;
 
+import org.apache.james.mailbox.acl.MailboxACL.NameType;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

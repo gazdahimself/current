@@ -19,11 +19,12 @@
 
 package org.apache.james.mailbox;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
 import org.slf4j.Logger;
 
 /**
@@ -118,37 +119,6 @@ public interface MailboxSession {
     }
 
     /**
-     * Gets the <a href='http://www.isi.edu/in-notes/rfc2342.txt' rel='tag'>RFC
-     * 2342</a> personal namespace for the current session.<br>
-     * Note that though servers may offer multiple personal namespaces, support
-     * is not offered through this API. This decision may be revised if
-     * reasonable use cases emerge.
-     * 
-     * @return Personal Namespace, not null
-     */
-    String getPersonalSpace();
-
-    /**
-     * Gets the <a href='http://www.isi.edu/in-notes/rfc2342.txt' rel='tag'>RFC
-     * 2342</a> other users namespace for the current session.<br>
-     * Note that though servers may offer multiple other users namespaces,
-     * support is not offered through this API. This decision may be revised if
-     * reasonable use cases emerge.
-     * 
-     * @return Other Users Namespace or null when there is non available
-     */
-    String getOtherUsersSpace();
-
-    /**
-     * Iterates the <a href='http://www.isi.edu/in-notes/rfc2342.txt'
-     * rel='tag'>RFC 2342</a> Shared Namespaces available for the current
-     * session.
-     * 
-     * @return not null though possibly empty
-     */
-    Collection<String> getSharedSpaces();
-
-    /**
      * Return the stored attributes for this {@link MailboxSession}.
      * 
      * @return attributes
@@ -156,9 +126,17 @@ public interface MailboxSession {
     Map<Object, Object> getAttributes();
 
     /**
-     * Return server side, folder path separator
-     * 
-     * @return path separator
+     * TODO getMailboxNameResolver.
+     *
+     * @return
      */
-    char getPathDelimiter();
+    MailboxNameResolver getMailboxNameResolver();
+    
+    /**
+     * TODO getOwner.
+     *
+     * @return
+     */
+    MailboxOwner getOwner();
+
 }

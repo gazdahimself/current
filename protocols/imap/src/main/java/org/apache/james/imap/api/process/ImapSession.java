@@ -20,6 +20,7 @@
 package org.apache.james.imap.api.process;
 
 import org.apache.james.imap.api.ImapSessionState;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.slf4j.Logger;
 
 /**
@@ -175,5 +176,12 @@ public interface ImapSession {
      * @return plainDisallowed
      */
     public boolean isPlainAuthDisallowed();
+    
+    /**
+     * TODO getMailboxNameCodec.
+     *
+     * @return
+     */
+    public MailboxNameCodec getMailboxNameCodec();
 
 }

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.james.mailbox.MailboxListener;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Receive a {@link org.apache.james.mailbox.MailboxListener.Event} and delegate it to an other
@@ -34,11 +34,11 @@ import org.apache.james.mailbox.model.MailboxPath;
  */
 public class HashMapDelegatingMailboxListener extends AbstractDelegatingMailboxListener{
 
-    private Map<MailboxPath, List<MailboxListener>> listeners = new HashMap<MailboxPath, List<MailboxListener>>();
+    private Map<MailboxName, List<MailboxListener>> listeners = new HashMap<MailboxName, List<MailboxListener>>();
     private List<MailboxListener> globalListeners = new ArrayList<MailboxListener>();
 
     @Override
-    protected Map<MailboxPath, List<MailboxListener>> getListeners() {
+    protected Map<MailboxName, List<MailboxListener>> getListeners() {
         return listeners;
     }
 

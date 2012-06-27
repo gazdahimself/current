@@ -54,8 +54,8 @@
     - jamesMailbox:mailboxUidValidity (LONG) 
     - jamesMailbox:mailboxName (STRING) 
     - jamesMailbox:mailboxLastUid (LONG) 
-    - jamesMailbox:mailboxNamespace (STRING) 
-    - jamesMailbox:mailboxUser (STRING) 
-    - jamesMailbox:mailboxLastUid (LONG) 
+    - jamesMailbox:mailboxOwner (STRING) 
+    - jamesMailbox:mailboxOwnerIsGroup (BOOLEAN) 
     - jamesMailbox:mailboxHighestModSeq (LONG) 
+    - mailboxAcl (STRING)
     + * (nt:unstructured) multiple

@@ -25,6 +25,9 @@ import javax.jcr.SimpleCredentials;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSession.User;
+import org.apache.james.mailbox.name.codec.DefaultMailboxNameCodec;
+import org.apache.james.mailbox.name.codec.LikeSearchPatternEscaper;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 
 /**
  * Manage JCR {@link Session}. It use the username and the password of 
@@ -33,12 +36,16 @@ import org.apache.james.mailbox.MailboxSession.User;
  */
 public class MailboxSessionJCRRepository {
     private final static String JCR_SESSION = "JCR_SESSION";
-    private Repository repository;
-    private String workspace;
-    
-    public MailboxSessionJCRRepository(Repository repository ,String workspace) {
+    private final Repository repository;
+    private final String workspace;
+    private final MailboxNameCodec mailboxNameAttributeCodec;
+    private final MailboxNameCodec mailboxNamePatternCodec;
+
+    public MailboxSessionJCRRepository(Repository repository, String workspace) {
         this.repository = repository;
         this.workspace = workspace;
+        this.mailboxNameAttributeCodec = MailboxNameCodec.SAFE_STORE_NAME_CODEC;
+        this.mailboxNamePatternCodec = new DefaultMailboxNameCodec(new LikeSearchPatternEscaper(mailboxNameAttributeCodec.getDelimiter(), LikeSearchPatternEscaper.JCR_UNIVERSAL_WILDCARD)); 
     }
 
     /**
@@ -108,4 +115,13 @@ public class MailboxSessionJCRRepository {
     public String getWorkspace() {
         return workspace;
     }
+    
+    public MailboxNameCodec getMailboxNameAttributeCodec() {
+        return mailboxNameAttributeCodec;
+    }
+    
+    public MailboxNameCodec getMailboxNamePatternCodec() {
+        return mailboxNamePatternCodec;
+    }
+
 }

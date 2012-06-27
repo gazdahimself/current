@@ -26,14 +26,18 @@ import junit.framework.Assert;
 import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.ListResponse;
-
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.junit.Before;
 import org.junit.Test;
 
 public class ListingEncodingUtilsTest  {
 
-    final String nameParameter = "LIST";
-    final String typeNameParameters = "A Type Name";
+    private static final MailboxNameCodec MAILBOX_NAME_CODEC = MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC;
+    private static final UnresolvedMailboxName MAILBOX_NAME = new MailboxNameBuilder(2).add(MailboxConstants.INBOX).add("sub").unqualified();
+    private final String typeNameParameters = "A Type Name";
     
     List<String> attributesOutput;
         
@@ -50,22 +54,22 @@ public class ListingEncodingUtilsTest  {
     public void testShouldAddHasChildrenToAttributes() throws Exception {
         // Setup 
         attributesOutput.add("\\HasChildren");
-        ListResponse input = new ListResponse(false, false, false, false, true, false, nameParameter, '.');
+        ListResponse input = new ListResponse(false, false, false, false, true, false, MAILBOX_NAME, MAILBOX_NAME_CODEC.getDelimiter());
             
         // Exercise
-        ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input);
-        Assert.assertEquals("* A Type Name (\\HasChildren) \".\" \"LIST\"\r\n", writer.getString());
+        ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input, MAILBOX_NAME_CODEC);
+        Assert.assertEquals("* A Type Name (\\HasChildren) \""+MAILBOX_NAME_CODEC.getDelimiter()+"\" \""+ MAILBOX_NAME_CODEC.encode(MAILBOX_NAME) +"\"\r\n", writer.getString());
     }
     
     @Test
     public void testShouldAddHasNoChildrenToAttributes() throws Exception {
         // Setup 
         attributesOutput.add("\\HasNoChildren");
-        ListResponse input = new ListResponse(false, false, false, false, false, true, nameParameter, '.');
+        ListResponse input = new ListResponse(false, false, false, false, false, true, MAILBOX_NAME, MAILBOX_NAME_CODEC.getDelimiter());
             
         // Exercise
-        ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input);
-        Assert.assertEquals("* A Type Name (\\HasNoChildren) \".\" \"LIST\"\r\n", writer.getString());
+        ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input, MAILBOX_NAME_CODEC);
+        Assert.assertEquals("* A Type Name (\\HasNoChildren) \""+MAILBOX_NAME_CODEC.getDelimiter()+"\" \""+ MAILBOX_NAME_CODEC.encode(MAILBOX_NAME) +"\"\r\n", writer.getString());
 
     }
 }

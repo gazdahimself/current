@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.hbase.HBaseNonTransactionalMapper;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.model.Subscription;
 import org.apache.james.mailbox.store.user.model.impl.SimpleSubscription;
@@ -46,9 +49,11 @@ public class HBaseSubscriptionMapper extends HBaseNonTransactionalMapper impleme
 
     /** Link to the HBase Configuration object and specific mailbox names */
     private final Configuration conf;
+    private final MailboxNameCodec mailboxNameCodec;
 
-    public HBaseSubscriptionMapper(Configuration conf) {
+    public HBaseSubscriptionMapper(Configuration conf, MailboxNameCodec mailboxNameCodec) {
         this.conf = conf;
+        this.mailboxNameCodec = mailboxNameCodec;
     }
 
     /*
@@ -56,18 +61,18 @@ public class HBaseSubscriptionMapper extends HBaseNonTransactionalMapper impleme
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String, java.lang.String)
      */
     @Override
-    public Subscription findMailboxSubscriptionForUser(String user, String mailbox) throws SubscriptionException {
+    public Subscription findMailboxSubscriptionForUser(MailboxOwner owner, MailboxName mailbox) throws SubscriptionException {
         HTable subscriptions = null;
         try {
             subscriptions = new HTable(conf, SUBSCRIPTIONS_TABLE);
             Subscription subscription = null;
-            Get get = new Get(Bytes.toBytes(user));
+            Get get = new Get(Bytes.toBytes(owner.getName()));
             get.addFamily(SUBSCRIPTION_CF);
             Result result = subscriptions.get(get);
 
             if (!result.isEmpty()) {
-                if (result.containsColumn(SUBSCRIPTION_CF, Bytes.toBytes(mailbox))) {
-                    subscription = new SimpleSubscription(user, mailbox);
+                if (result.containsColumn(SUBSCRIPTION_CF, Bytes.toBytes(mailboxNameCodec.encode(mailbox)))) {
+                    subscription = new SimpleSubscription(owner.getName(), mailbox);
                     return subscription;
                 }
             }
@@ -95,7 +100,7 @@ public class HBaseSubscriptionMapper extends HBaseNonTransactionalMapper impleme
         HTable subscriptions = null;
         try {
             subscriptions = new HTable(conf, SUBSCRIPTIONS_TABLE);
-            Put put = toPut(subscription);
+            Put put = toPut(subscription, mailboxNameCodec);
             subscriptions.put(put);
         } catch (IOException e) {
             throw new SubscriptionException(e);
@@ -115,18 +120,19 @@ public class HBaseSubscriptionMapper extends HBaseNonTransactionalMapper impleme
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser(java.lang.String)
      */
     @Override
-    public List<Subscription> findSubscriptionsForUser(String user) throws SubscriptionException {
+    public List<Subscription> findSubscriptionsForUser(MailboxOwner owner) throws SubscriptionException {
         HTable subscriptions = null;
         try {
             subscriptions = new HTable(conf, SUBSCRIPTIONS_TABLE);
             List<Subscription> subscriptionList = new ArrayList<Subscription>();
-            Get get = new Get(Bytes.toBytes(user));
+            Get get = new Get(Bytes.toBytes(owner.getName()));
             get.addFamily(SUBSCRIPTION_CF);
             Result result = subscriptions.get(get);
             if (!result.isEmpty()) {
                 List<KeyValue> columns = result.list();
                 for (KeyValue key : columns) {
-                    subscriptionList.add(new SimpleSubscription(user, Bytes.toString(key.getQualifier())));
+                    MailboxName mailboxName = mailboxNameCodec.decode(Bytes.toString(key.getQualifier()), true);
+                    subscriptionList.add(new SimpleSubscription(owner.getName(), mailboxName));
                 }
             }
             return subscriptionList;
@@ -154,7 +160,7 @@ public class HBaseSubscriptionMapper extends HBaseNonTransactionalMapper impleme
         try {
             subscriptions = new HTable(conf, SUBSCRIPTIONS_TABLE);
             Delete delete = new Delete(Bytes.toBytes(subscription.getUser()));
-            delete.deleteColumns(SUBSCRIPTION_CF, Bytes.toBytes(subscription.getMailbox()));
+            delete.deleteColumns(SUBSCRIPTION_CF, Bytes.toBytes(mailboxNameCodec.encode(subscription.getMailbox())));
             subscriptions.delete(delete);
             subscriptions.close();
         } catch (IOException e) {

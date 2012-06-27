@@ -34,12 +34,15 @@ import org.apache.james.imap.message.response.ListRightsResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.slf4j.Logger;
 
 /**
@@ -56,15 +59,18 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
     }
 
     @Override
-    protected void doProcess(ListRightsRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
+    protected void doProcess(ListRightsRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
 
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final String mailboxName = message.getMailboxName();
-        final String identifier = message.getIdentifier();
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
+        final MailboxName mailboxPath = nameResolver.resolve(mailboxName, mailboxSession.getUser().getUserName());
+        final String identifier = request.getIdentifier();
+
         try {
 
-            MessageManager messageManager = mailboxManager.getMailbox(buildFullPath(session, mailboxName), mailboxSession);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
 
             /*
              * RFC 4314 section 6.
@@ -84,7 +90,7 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
                 Object[] params = new Object[] {
                         Rfc4314Rights.a_Administer_RIGHT.toString(),
                         command.getName(),
-                        mailboxName
+                        session.getMailboxNameCodec().encode(mailboxName)
                 };
                 HumanReadableText text = new HumanReadableText(HumanReadableText.UNSUFFICIENT_RIGHTS_KEY, HumanReadableText.UNSUFFICIENT_RIGHTS_DEFAULT_VALUE, params);
                 no(command, tag, responder, text);

@@ -28,6 +28,7 @@ import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
 import org.apache.james.imap.encode.ImapEncoder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.lib.netty.AbstractServerFactory;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ public class IMAPServerFactory extends AbstractServerFactory{
     private ImapDecoder decoder;
     private ImapEncoder encoder;
     private ImapProcessor processor;
+    private MailboxNameResolver mailboxNameResolver;
 
     
     @Resource(name = "filesystem")
@@ -60,6 +62,11 @@ public class IMAPServerFactory extends AbstractServerFactory{
         this.processor = processor;
     }
     
+    @Resource(name = "imapMailboxNameResolver")
+    public void setImapMailboxNameResolver(MailboxNameResolver mailboxNameResolver) {
+        this.mailboxNameResolver = mailboxNameResolver;
+    }
+
     protected IMAPServer createServer() {
        return new IMAPServer();
     }
@@ -77,6 +84,7 @@ public class IMAPServerFactory extends AbstractServerFactory{
             server.setImapDecoder(decoder);
             server.setImapEncoder(encoder);
             server.setImapProcessor(processor);
+            server.setImapMailboxNameResolver(mailboxNameResolver);
             server.configure(serverConfig);
             servers.add(server);
         }

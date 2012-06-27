@@ -27,9 +27,11 @@ import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.CreateRequest;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 
 public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
 
@@ -45,7 +47,9 @@ public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(CreateRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = buildFullPath(session, request.getMailboxName());
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final MailboxName mailboxPath = nameResolver.resolve(request.getMailboxName(), mailboxSession.getUser().getUserName());
         try {
             final MailboxManager mailboxManager = getMailboxManager();
             mailboxManager.createMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));

@@ -18,16 +18,32 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir;
 
+import java.io.File;
+import java.io.IOException;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.james.mailbox.AbstractSubscriptionManagerTest;
 import org.apache.james.mailbox.SubscriptionManager;
+import org.apache.james.mailbox.maildir.locator.LocalAndVirtualMailboxLocatorChain;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
+import org.junit.Before;
 
 public class MaildirSubscriptionManagerTest extends AbstractSubscriptionManagerTest{
+    private static final File MAILDIR_HOME = new File("target/Maildir");
+    private static final File MAILDIR_HOME_DOMAINS = new File(MAILDIR_HOME, "domains");
+    private static final File MAILDIR_HOME_GROUPS = new File(MAILDIR_HOME, "groups");
+    private static final File MAILDIR_HOME_USERS = new File(MAILDIR_HOME, "users");
+
+    @Before
+    public void clean() throws IOException {
+        FileUtils.deleteDirectory(MAILDIR_HOME);
+    }
 
     @Override
     public SubscriptionManager createSubscriptionManager() {
-        MaildirStore store = new MaildirStore("target/Maildir/%domain/%user", new JVMMailboxPathLocker());
+        LocalAndVirtualMailboxLocatorChain maildirLocator = new LocalAndVirtualMailboxLocatorChain(MAILDIR_HOME_USERS, MAILDIR_HOME_GROUPS, MAILDIR_HOME_DOMAINS);
+        MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
         MaildirMailboxSessionMapperFactory factory = new MaildirMailboxSessionMapperFactory(store);
         StoreSubscriptionManager sm = new StoreSubscriptionManager(factory);
         return sm;

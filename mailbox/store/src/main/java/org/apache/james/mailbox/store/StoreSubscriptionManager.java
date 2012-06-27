@@ -27,6 +27,7 @@ import org.apache.james.mailbox.RequestAware;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.transaction.Mapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
@@ -49,13 +50,13 @@ public class StoreSubscriptionManager implements SubscriptionManager {
     /**
      * @see org.apache.james.mailbox.SubscriptionManager#subscribe(org.apache.james.mailbox.MailboxSession, java.lang.String)
      */
-    public void subscribe(final MailboxSession session, final String mailbox) throws SubscriptionException {
+    public void subscribe(final MailboxSession session, final MailboxName mailbox) throws SubscriptionException {
         final SubscriptionMapper mapper = mapperFactory.getSubscriptionMapper(session);
         try {
             mapper.execute(new Mapper.VoidTransaction() {
 
                 public void runVoid() throws MailboxException {
-                    final Subscription subscription = mapper.findMailboxSubscriptionForUser(session.getUser().getUserName(), mailbox);
+                    final Subscription subscription = mapper.findMailboxSubscriptionForUser(session.getOwner(), mailbox);
                     if (subscription == null) {
                         final Subscription newSubscription = createSubscription(session, mailbox);
                         mapper.save(newSubscription);
@@ -77,17 +78,17 @@ public class StoreSubscriptionManager implements SubscriptionManager {
      * @param mailbox
      * @return subscription 
      */
-    protected Subscription createSubscription(final MailboxSession session, final String mailbox) {
+    protected Subscription createSubscription(final MailboxSession session, final MailboxName mailbox) {
         return new SimpleSubscription(session.getUser().getUserName(), mailbox);
     }
 
     /**
      * @see org.apache.james.mailbox.SubscriptionManager#subscriptions(org.apache.james.mailbox.MailboxSession)
      */
-    public Collection<String> subscriptions(final MailboxSession session) throws SubscriptionException {
+    public Collection<MailboxName> subscriptions(final MailboxSession session) throws SubscriptionException {
         final SubscriptionMapper mapper = mapperFactory.getSubscriptionMapper(session);
-        final List<Subscription> subscriptions = mapper.findSubscriptionsForUser(session.getUser().getUserName());
-        final Collection<String> results = new HashSet<String>(INITIAL_SIZE);
+        final List<Subscription> subscriptions = mapper.findSubscriptionsForUser(session.getOwner());
+        final Collection<MailboxName> results = new HashSet<MailboxName>(INITIAL_SIZE);
         for (Subscription subscription:subscriptions) {
             results.add(subscription.getMailbox());
         }        
@@ -97,13 +98,13 @@ public class StoreSubscriptionManager implements SubscriptionManager {
     /**
      * @see org.apache.james.mailbox.SubscriptionManager#unsubscribe(org.apache.james.mailbox.MailboxSession, java.lang.String)
      */
-    public void unsubscribe(final MailboxSession session, final String mailbox) throws SubscriptionException {
+    public void unsubscribe(final MailboxSession session, final MailboxName mailbox) throws SubscriptionException {
         final SubscriptionMapper mapper = mapperFactory.getSubscriptionMapper(session);
         try {
             mapper.execute(new Mapper.VoidTransaction() {
 
                 public void runVoid() throws MailboxException {
-                    final Subscription subscription = mapper.findMailboxSubscriptionForUser(session.getUser().getUserName(), mailbox);
+                    final Subscription subscription = mapper.findMailboxSubscriptionForUser(session.getOwner(), mailbox);
                     if (subscription != null) {
                         mapper.delete(subscription);
                     }

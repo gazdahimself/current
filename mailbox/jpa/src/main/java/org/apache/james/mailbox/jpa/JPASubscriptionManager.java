@@ -19,7 +19,10 @@
 package org.apache.james.mailbox.jpa;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.jpa.user.JPASubscriptionMapper;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.mailbox.store.user.model.Subscription;
 
@@ -36,8 +39,13 @@ public class JPASubscriptionManager extends StoreSubscriptionManager {
     /**
      * @see org.apache.james.mailbox.store.StoreSubscriptionManager#createSubscription(org.apache.james.mailbox.MailboxSession, java.lang.String)
      */
-    protected Subscription createSubscription(final MailboxSession session, final String mailbox) {
-        final Subscription newSubscription = new JPASubscription(session.getUser().getUserName(), mailbox);
-        return newSubscription;
+    @Override
+    protected Subscription createSubscription(final MailboxSession session, final MailboxName mailbox) {
+        try {
+            JPASubscriptionMapper subscriptionMapper = (JPASubscriptionMapper) mapperFactory.getSubscriptionMapper(session);
+            return new JPASubscription(session.getUser().getUserName(), mailbox, subscriptionMapper.getMailboxNameCodec());
+        } catch (SubscriptionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

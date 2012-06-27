@@ -19,6 +19,8 @@
 
 package org.apache.james.imap.api;
 
+import org.apache.james.mailbox.model.MailboxConstants;
+
 public interface ImapConstants {
     // Basic response types
     public static final String OK = "OK";
@@ -105,6 +107,9 @@ public interface ImapConstants {
 
     public static final String SUPPORTS_ACL = "ACL";
     
+    /**
+     * Be aware that there is another "INBOX" constant in {@link MailboxConstants#INBOX}.
+     */
     public static final String INBOX_NAME = "INBOX";
 
     public static final String MIME_TYPE_TEXT = "TEXT";

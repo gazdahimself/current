@@ -144,30 +144,24 @@ public class NamespaceResponse implements ImapResponseMessage {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
-        if (obj == null)
+        }
+        else if (o instanceof NamespaceResponse) {
+            NamespaceResponse other = (NamespaceResponse) o;
+            return equalsList(this.personal, other.personal)
+                    && equalsList(this.users, other.users)
+                    && equalsList(this.shared, other.shared)
+            ;
+        }
+        else {
             return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final NamespaceResponse other = (NamespaceResponse) obj;
-        if (personal == null) {
-            if (other.personal != null)
-                return false;
-        } else if (!personal.equals(other.personal))
-            return false;
-        if (shared == null) {
-            if (other.shared != null)
-                return false;
-        } else if (!shared.equals(other.shared))
-            return false;
-        if (users == null) {
-            if (other.users != null)
-                return false;
-        } else if (!users.equals(other.users))
-            return false;
-        return true;
+        }
+    }
+    
+    private static boolean equalsList(List<Namespace> l1, List<Namespace> l2) {
+        return ((l1 == null || l1.isEmpty()) && (l2 == null || l2.isEmpty())) || (l1 != null && l1.equals(l2));
     }
 
     /**

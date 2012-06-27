@@ -20,7 +20,6 @@
 package org.apache.james.imap.processor;
 
 import org.apache.james.imap.api.ImapCommand;
-import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.message.response.StatusResponse;
@@ -36,15 +35,21 @@ import org.apache.james.mailbox.MailboxSession.User;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -61,21 +66,23 @@ import org.junit.runner.RunWith;
 @RunWith(JMock.class)
 public class ListRightsProcessorTest {
 
-    private static final String MAILBOX_NAME = ImapConstants.INBOX_NAME;
-    private static final String USER_1 = "user1";
+    private static final UnresolvedMailboxName MAILBOX_NAME = new MailboxNameBuilder(2).add(MailboxConstants.INBOX).add("sub").unqualified();
+    private static final MailboxNameCodec MAILBOX_NAME_CODEC = MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC;
 
-    ImapSession imapSessionStub;
-    MailboxManager mailboxManagerStub;
-    MailboxSession mailboxSessionStub;
-    MessageManager messageManagerStub;
-    MetaData metaDataStub;
-    Mockery mockery = new JUnit4Mockery();
-    ListRightsRequest listRightsRequest;
-    UnpooledStatusResponseFactory statusResponseFactory;
-    ListRightsProcessor subject;
-    User user1Stub;
-    MailboxACLEntryKey user1Key;
-    MailboxACLRights[] listRights;
+    private static final MailboxNameResolver MAILBOX_NAME_RESOLVER = DefaultMailboxNameResolver.INSTANCE;
+    private static final String USER_1 = "user1";
+    private ImapSession imapSessionStub;
+    private MailboxACLRights[] listRights;
+    private ListRightsRequest listRightsRequest;
+    private MailboxManager mailboxManagerStub;
+    private MailboxSession mailboxSessionStub;
+    private MessageManager messageManagerStub;
+    private MetaData metaDataStub;
+    private Mockery mockery;
+    private UnpooledStatusResponseFactory statusResponseFactory;
+    private ListRightsProcessor subject;
+    private MailboxACLEntryKey user1Key;
+    private User user1Stub;
 
     private Expectations prepareRightsExpectations() throws MailboxException {
         return new Expectations() {
@@ -83,12 +90,16 @@ public class ListRightsProcessorTest {
 
                 allowing(imapSessionStub).getAttribute(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY);
                 will(returnValue(mailboxSessionStub));
+                allowing(imapSessionStub).getMailboxNameCodec();
+                will(returnValue(MAILBOX_NAME_CODEC));
 
                 allowing(imapSessionStub).getState();
                 will(returnValue(ImapSessionState.AUTHENTICATED));
 
                 allowing(mailboxSessionStub).getUser();
                 will(returnValue(user1Stub));
+                allowing(mailboxSessionStub).getMailboxNameResolver();
+                will(returnValue(MAILBOX_NAME_RESOLVER));
 
                 allowing(user1Stub).getUserName();
                 will(returnValue(USER_1));
@@ -105,6 +116,7 @@ public class ListRightsProcessorTest {
 
     @Before
     public void setUp() throws Exception {
+        mockery = new JUnit4Mockery();
         statusResponseFactory = new UnpooledStatusResponseFactory();
         mailboxManagerStub = mockery.mock(MailboxManager.class);
         subject = new ListRightsProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseFactory);
@@ -121,60 +133,11 @@ public class ListRightsProcessorTest {
     }
     
     @Test
-    public void testNoListRight() throws Exception {
-
-        Expectations expectations = prepareRightsExpectations();
-        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.l_Lookup_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
-        expectations.will(Expectations.returnValue(false));
-
-        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxPath.class)), expectations.with(Expectations.any(MailboxSession.class)));
-        expectations.will(Expectations.returnValue(messageManagerStub));
-
-        mockery.checking(expectations);
-
-        final Responder responderMock = mockery.mock(Responder.class);
-        mockery.checking(new Expectations() {
-            {
-                oneOf(responderMock).respond(with(new StatusResponseTypeMatcher(StatusResponse.Type.NO)));
-            }
-        });
-
-        subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
-
-    }
-    
-    @Test
-    public void testNoAdminRight() throws Exception {
-
-        Expectations expectations = prepareRightsExpectations();
-        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.l_Lookup_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
-        expectations.will(Expectations.returnValue(true));
-
-        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.a_Administer_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
-        expectations.will(Expectations.returnValue(false));
-
-        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxPath.class)), expectations.with(Expectations.any(MailboxSession.class)));
-        expectations.will(Expectations.returnValue(messageManagerStub));
-
-        mockery.checking(expectations);
-
-        final Responder responderMock = mockery.mock(Responder.class);
-        mockery.checking(new Expectations() {
-            {
-                oneOf(responderMock).respond(with(new StatusResponseTypeMatcher(StatusResponse.Type.NO)));
-            }
-        });
-
-        subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
-
-    }
-    
-    @Test
     public void testInexistentMailboxName() throws Exception {
         Expectations expectations = prepareRightsExpectations();
         
-        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxPath.class)), expectations.with(Expectations.any(MailboxSession.class)));
-        expectations.will(Expectations.throwException(new MailboxNotFoundException(MAILBOX_NAME)));
+        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxName.class)), expectations.with(Expectations.any(MailboxSession.class)));
+        expectations.will(Expectations.throwException(new MailboxNotFoundException(MAILBOX_NAME.toString())));
 
         mockery.checking(expectations);
 
@@ -187,7 +150,6 @@ public class ListRightsProcessorTest {
 
         subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
     }
-
     
     @Test
     public void testListRights() throws MailboxException {
@@ -195,7 +157,7 @@ public class ListRightsProcessorTest {
 
         Expectations expectations = prepareRightsExpectations();
         
-        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxPath.class)), expectations.with(Expectations.any(MailboxSession.class)));
+        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxName.class)), expectations.with(Expectations.any(MailboxSession.class)));
         expectations.will(Expectations.returnValue(messageManagerStub));
         
         expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.l_Lookup_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
@@ -222,6 +184,56 @@ public class ListRightsProcessorTest {
         });
 
         subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
+    }
+    
+    @Test
+    public void testNoAdminRight() throws Exception {
+
+        Expectations expectations = prepareRightsExpectations();
+        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.l_Lookup_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
+        expectations.will(Expectations.returnValue(true));
+
+        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.a_Administer_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
+        expectations.will(Expectations.returnValue(false));
+
+        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxName.class)), expectations.with(Expectations.any(MailboxSession.class)));
+        expectations.will(Expectations.returnValue(messageManagerStub));
+
+        mockery.checking(expectations);
+
+        final Responder responderMock = mockery.mock(Responder.class);
+        mockery.checking(new Expectations() {
+            {
+                oneOf(responderMock).respond(with(new StatusResponseTypeMatcher(StatusResponse.Type.NO)));
+            }
+        });
+
+        subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
+
+    }
+
+    
+    @Test
+    public void testNoListRight() throws Exception {
+
+        Expectations expectations = prepareRightsExpectations();
+        expectations.allowing(messageManagerStub).hasRight(expectations.with(Expectations.equal(Rfc4314Rights.l_Lookup_RIGHT)), expectations.with(Expectations.same(mailboxSessionStub)));
+        expectations.will(Expectations.returnValue(false));
+
+        expectations.allowing(mailboxManagerStub).getMailbox(expectations.with(Expectations.any(MailboxName.class)), expectations.with(Expectations.any(MailboxSession.class)));
+        expectations.will(Expectations.returnValue(messageManagerStub));
+
+        mockery.checking(expectations);
+
+        final Responder responderMock = mockery.mock(Responder.class);
+        mockery.checking(new Expectations() {
+            {
+                oneOf(responderMock).respond(with(new StatusResponseTypeMatcher(StatusResponse.Type.NO)));
+            }
+        });
+
+        subject.doProcess(listRightsRequest, responderMock, imapSessionStub);
+
     }
 
 }

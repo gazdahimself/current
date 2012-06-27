@@ -23,6 +23,7 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.message.request.AbstractMailboxSelectionRequest;
 import org.apache.james.imap.message.request.SelectRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * Parse SELECT commands
@@ -34,7 +35,7 @@ public class SelectCommandParser extends AbstractSelectionCommandParser {
     }
 
     @Override
-    protected AbstractMailboxSelectionRequest createRequest(ImapCommand command, String mailboxName, boolean condstore, Long lastKnownUidValidity, Long knownModSeq, IdRange[] uidSet, IdRange[] knownUidSet, IdRange[] knownSequenceSet, String tag) {
+    protected AbstractMailboxSelectionRequest createRequest(ImapCommand command, UnresolvedMailboxName mailboxName, boolean condstore, Long lastKnownUidValidity, Long knownModSeq, IdRange[] uidSet, IdRange[] knownUidSet, IdRange[] knownSequenceSet, String tag) {
         return new SelectRequest(command, mailboxName, condstore, lastKnownUidValidity, knownModSeq, uidSet, knownUidSet, knownSequenceSet, tag);
     }
 

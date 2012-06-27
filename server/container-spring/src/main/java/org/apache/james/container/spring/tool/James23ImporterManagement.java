@@ -24,7 +24,6 @@ import javax.annotation.Resource;
 import javax.mail.MessagingException;
 
 import org.apache.james.domainlist.api.DomainListException;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailrepository.api.MailRepositoryStore.MailRepositoryStoreException;
 import org.apache.james.user.api.UsersRepositoryException;
 

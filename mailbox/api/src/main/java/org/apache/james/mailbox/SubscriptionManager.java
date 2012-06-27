@@ -22,6 +22,7 @@ package org.apache.james.mailbox;
 import java.util.Collection;
 
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Subscribes mailboxes to users. This is only needed to implement if the Mailbox should be usable via
@@ -40,7 +41,7 @@ public interface SubscriptionManager extends RequestAware {
      * @throws SubscriptionException
      *             when subscription fails
      */
-    public void subscribe(MailboxSession session, String mailbox) throws SubscriptionException;
+    public void subscribe(MailboxSession session, MailboxName mailboxName) throws SubscriptionException;
 
     /**
      * Finds all subscriptions for the user in the session.
@@ -51,7 +52,7 @@ public interface SubscriptionManager extends RequestAware {
      * @throws SubscriptionException
      *             when subscriptions cannot be read
      */
-    public Collection<String> subscriptions(MailboxSession session) throws SubscriptionException;
+    public Collection<MailboxName> subscriptions(MailboxSession session) throws SubscriptionException;
 
     /**
      * Unsubscribes the user in the session from the given mailbox.
@@ -63,6 +64,6 @@ public interface SubscriptionManager extends RequestAware {
      * @throws SubscriptionException
      *             when subscriptions cannot be read
      */
-    public void unsubscribe(MailboxSession session, String mailbox) throws SubscriptionException;
+    public void unsubscribe(MailboxSession session, MailboxName mailboxName) throws SubscriptionException;
 
 }

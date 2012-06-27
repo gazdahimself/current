@@ -19,7 +19,7 @@
 
 package org.apache.james.mailbox.exception;
 
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * {@link MailboxException} which should get thrown if someone tries to modify a READ-ONLY Mailbox
@@ -36,13 +36,13 @@ public class ReadOnlyException extends MailboxException{
 
 
 
-    public ReadOnlyException(MailboxPath path, char delimiter) {
-        super(path.getFullName(delimiter));
+    public ReadOnlyException(MailboxName path) {
+        super(path.toString());
     }
 
 
-    public ReadOnlyException(MailboxPath path, char delimiter, Exception e) {
-        super(path.getFullName(delimiter), e);
+    public ReadOnlyException(MailboxName path, Exception e) {
+        super(path.toString(), e);
     }
 }
 

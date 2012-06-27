@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.user.model;
 
+import org.apache.james.mailbox.name.MailboxName;
+
 /**
  * 
  * Subscription of a mailbox to a user
@@ -33,7 +35,7 @@ public interface Subscription {
      * 
      * @return not null
      */
-    String getMailbox();
+    MailboxName getMailbox();
 
     /**
      * Gets the name of the subscribed user.

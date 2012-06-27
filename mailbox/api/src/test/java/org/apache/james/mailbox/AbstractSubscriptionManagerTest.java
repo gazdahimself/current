@@ -21,6 +21,8 @@ package org.apache.james.mailbox;
 import java.util.Collection;
 
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,42 +34,45 @@ import org.junit.Test;
 public abstract class AbstractSubscriptionManagerTest {
 
     private final static String USER1 = "test";
-    private final static String MAILBOX1 = "test1";
-    private final static String MAILBOX2 = "test2";
 
     public abstract SubscriptionManager createSubscriptionManager();
     
     @Test
     public void testSubscriptionManager() throws Exception {
         SubscriptionManager manager = createSubscriptionManager();
-        MailboxSession session = new MockMailboxSession(USER1);
+        MailboxSession session = 
+                new MockMailboxSession(USER1, DefaultMailboxNameResolver.INSTANCE);
         manager.startProcessingRequest(session);
+        
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
+        MailboxName mailbox1 = inbox.child("test1");
+        MailboxName mailbox2 = inbox.child("test2");
         
         Assert.assertTrue(manager.subscriptions(session).isEmpty());
         
-        manager.subscribe(session, MAILBOX1);
-        Assert.assertEquals(MAILBOX1, manager.subscriptions(session).iterator().next());
+        manager.subscribe(session, mailbox1);
+        Assert.assertEquals(mailbox1, manager.subscriptions(session).iterator().next());
         Assert.assertEquals(1, manager.subscriptions(session).size());
         
         
-        manager.subscribe(session, MAILBOX1);
-        Assert.assertEquals(MAILBOX1, manager.subscriptions(session).iterator().next());
+        manager.subscribe(session, mailbox1);
+        Assert.assertEquals(mailbox1, manager.subscriptions(session).iterator().next());
         Assert.assertEquals(1, manager.subscriptions(session).size());
         
-        manager.subscribe(session, MAILBOX2);
-        Collection<String> col = manager.subscriptions(session);
+        manager.subscribe(session, mailbox2);
+        Collection<MailboxName> col = manager.subscriptions(session);
       
-        Assert.assertTrue(col.contains(MAILBOX2));
-        Assert.assertTrue(col.contains(MAILBOX1));
+        Assert.assertTrue(col.contains(mailbox2));
+        Assert.assertTrue(col.contains(mailbox1));
         Assert.assertEquals(2, col.size());
         
         
-        manager.unsubscribe(session, MAILBOX1);
-        Assert.assertEquals(MAILBOX2, manager.subscriptions(session).iterator().next());
+        manager.unsubscribe(session, mailbox1);
+        Assert.assertEquals(mailbox2, manager.subscriptions(session).iterator().next());
         Assert.assertEquals(1, manager.subscriptions(session).size());
         
-        manager.unsubscribe(session, MAILBOX1);
-        Assert.assertEquals(MAILBOX2, manager.subscriptions(session).iterator().next());
+        manager.unsubscribe(session, mailbox1);
+        Assert.assertEquals(mailbox2, manager.subscriptions(session).iterator().next());
         Assert.assertEquals(1, manager.subscriptions(session).size());
         
         

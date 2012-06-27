@@ -279,14 +279,6 @@ public class ImapResponseComposerImpl implements ImapConstants, ImapResponseComp
         writeASCII(Long.toString(number));
         return this;
     }
-    
-    /**
-     * @see org.apache.james.imap.encode.ImapResponseComposer#mailbox(java.lang.String)
-     */
-    public ImapResponseComposer mailbox(final String mailboxName) throws IOException {
-        quote(CharsetUtil.encodeModifiedUTF7(mailboxName));
-        return this;
-    }
 
     /**
      * @see

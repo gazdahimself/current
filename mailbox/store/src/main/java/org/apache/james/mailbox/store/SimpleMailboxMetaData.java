@@ -19,32 +19,31 @@
 
 package org.apache.james.mailbox.store;
 
-import org.apache.james.mailbox.StandardMailboxMetaDataComparator;
 import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
-public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<MailboxMetaData> {
+public class SimpleMailboxMetaData implements MailboxMetaData {
 
-    public static MailboxMetaData createNoSelect(MailboxPath path, char delimiter) {
-        return new SimpleMailboxMetaData(path, delimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NOSELECT);
+    public static MailboxMetaData createNoSelect(MailboxName mailboxName, char delimiter) {
+        return new SimpleMailboxMetaData(mailboxName, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NOSELECT);
     }
-
-    private final MailboxPath path;
-
-    private final char delimiter;
 
     private final Children inferiors;
 
     private final Selectability selectability;
+    
+    private final MailboxName mailboxName;
 
-    public SimpleMailboxMetaData(MailboxPath path, char delimiter) {
-        this(path, delimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NONE);
+    public SimpleMailboxMetaData(MailboxName mailboxName) {
+        this(mailboxName, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NONE);
     }
 
-    public SimpleMailboxMetaData(final MailboxPath path, final char delimiter, final Children inferiors, final Selectability selectability) {
+    public SimpleMailboxMetaData(final MailboxName mailboxName, final Children inferiors, final Selectability selectability) {
         super();
-        this.path = path;
-        this.delimiter = delimiter;
+        if (mailboxName == null) {
+            throw new IllegalArgumentException("Need a non-null "+ MailboxName.class.getName() +" to create a new "+ SimpleMailboxMetaData.class.getName() +".");
+        }
+        this.mailboxName = mailboxName;
         this.inferiors = inferiors;
         this.selectability = selectability;
     }
@@ -66,60 +65,44 @@ public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<Mailbo
     }
 
     /**
-     * @see org.apache.james.mailbox.model.MailboxMetaData#getHierarchyDelimiter()
-     */
-    public char getHierarchyDelimiter() {
-        return delimiter;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.model.MailboxMetaData#getPath()
-     */
-    public MailboxPath getPath() {
-        return path;
-    }
-
-    /**
      * @see java.lang.Object#toString()
      */
     public String toString() {
-        return "ListResult: " + path;
+        return "ListResult: " + mailboxName;
     }
 
     /**
      * @see java.lang.Object#hashCode()
      */
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + ((path == null) ? 0 : path.hashCode());
-        return result;
+        return mailboxName.hashCode();
     }
 
     /**
      * @see java.lang.Object#equals(java.lang.Object)
      */
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
+    public boolean equals(Object o) {
+        if (o instanceof MailboxMetaData) {
+            MailboxMetaData other = (MailboxMetaData) o;
+            return mailboxName.equals(other.getMailboxName());
+        }
+        else {
             return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final SimpleMailboxMetaData other = (SimpleMailboxMetaData) obj;
-        if (path == null) {
-            if (other.path != null)
-                return false;
-        } else if (!path.equals(other.path))
-            return false;
-        return true;
+        }
     }
 
+//    /**
+//     * @see java.lang.Comparable#compareTo(java.lang.Object)
+//     */
+//    public int compareTo(MailboxMetaData o) {
+//        return StandardMailboxMetaDataComparator.order(this, o);
+//    }
+
     /**
-     * @see java.lang.Comparable#compareTo(java.lang.Object)
+     * @see org.apache.james.mailbox.model.MailboxMetaData#getMailboxName()
      */
-    public int compareTo(MailboxMetaData o) {
-        return StandardMailboxMetaDataComparator.order(this, o);
+    public MailboxName getMailboxName() {
+        return mailboxName;
     }
 
 }

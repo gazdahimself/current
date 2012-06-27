@@ -19,16 +19,17 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 public class SubscribeRequest extends AbstractImapRequest {
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
 
-    public SubscribeRequest(final ImapCommand command, final String mailboxName, final String tag) {
+    public SubscribeRequest(final ImapCommand command, final UnresolvedMailboxName mailboxName, final String tag) {
         super(tag, command);
         this.mailboxName = mailboxName;
     }
 
-    public final String getMailboxName() {
+    public final UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 }

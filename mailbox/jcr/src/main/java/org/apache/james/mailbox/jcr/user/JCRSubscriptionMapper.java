@@ -19,6 +19,7 @@
 package org.apache.james.mailbox.jcr.user;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.jcr.Node;
@@ -28,17 +29,18 @@ import javax.jcr.Property;
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
 import javax.jcr.query.Query;
-import javax.jcr.query.QueryManager;
 import javax.jcr.query.QueryResult;
 
-import org.apache.jackrabbit.commons.JcrUtils;
-import org.apache.jackrabbit.util.Text;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.jcr.AbstractJCRScalingMapper;
+import org.apache.james.mailbox.jcr.JCRImapConstants;
+import org.apache.james.mailbox.jcr.JCRXPathQueryBuilder;
 import org.apache.james.mailbox.jcr.MailboxSessionJCRRepository;
 import org.apache.james.mailbox.jcr.user.model.JCRSubscription;
-import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.model.Subscription;
 
@@ -49,16 +51,14 @@ import org.apache.james.mailbox.store.user.model.Subscription;
 public class JCRSubscriptionMapper extends AbstractJCRScalingMapper implements SubscriptionMapper {
 
     public JCRSubscriptionMapper(final MailboxSessionJCRRepository repos, MailboxSession session, final int scaling) {
-        super(repos,session, scaling);
+        super(repos, session, scaling);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
+    /**
      * org.apache.james.mailbox.store.user.SubscriptionMapper#delete(org.apache
      * .james.imap.store.user.model.Subscription)
      */
+    @Override
     public void delete(Subscription subscription) throws SubscriptionException {
 
         JCRSubscription sub = (JCRSubscription) subscription;
@@ -66,16 +66,17 @@ public class JCRSubscriptionMapper extends AbstractJCRScalingMapper implements S
 
             Node node = sub.getNode();
             if (node != null) {
-                Property prop = node.getProperty(JCRSubscription.MAILBOXES_PROPERTY);
+                String encodedMailbox = repository.getMailboxNameAttributeCodec().encode(sub.getMailbox());
+                Property prop = node.getProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP);
                 Value[] values = prop.getValues();
-                List<String> newValues = new ArrayList<String>();
+                List<String> newValues = new ArrayList<String>(values.length);
                 for (int i = 0; i < values.length; i++) {
                     String m = values[i].getString();
-                    if (m.equals(sub.getMailbox()) == false) {
+                    if (!m.equals(encodedMailbox)) {
                         newValues.add(m);
                     }
                 }
-                if (newValues.isEmpty() == false) {
+                if (!newValues.isEmpty()) {
                     prop.setValue(newValues.toArray(new String[newValues.size()]));
                 } else {
                     prop.remove();
@@ -89,100 +90,103 @@ public class JCRSubscriptionMapper extends AbstractJCRScalingMapper implements S
 
     }
 
-
-
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String, java.lang.String)
+    /**
+     * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String,
+     *      java.lang.String)
      */
-    public Subscription findMailboxSubscriptionForUser(String user, String mailbox) throws SubscriptionException {
+    @Override
+    public JCRSubscription findMailboxSubscriptionForUser(MailboxOwner owner, MailboxName mailbox) throws SubscriptionException {
         try {
-            String queryString = "/jcr:root/" + MAILBOXES_PATH + "//element(*,jamesMailbox:user)[@" + JCRSubscription.USERNAME_PROPERTY + "='" + user + "'] AND [@" + JCRSubscription.MAILBOXES_PROPERTY +"='" + mailbox + "']";
-
-            QueryManager manager = getSession().getWorkspace().getQueryManager();
-            QueryResult result = manager.createQuery(queryString, Query.XPATH).execute();
-            
-            NodeIterator nodeIt = result.getNodes();
-            if (nodeIt.hasNext()) {
-                JCRSubscription sub = new JCRSubscription(nodeIt.nextNode(), mailbox, getLogger());
-                return sub;
-            }
-            
-        } catch (PathNotFoundException e) {
-            // nothing todo here
-        } catch (RepositoryException e) {
-            throw new SubscriptionException(e);
-        }
-        return null;
-
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser
-     * (java.lang.String)
-     */
-    public List<Subscription> findSubscriptionsForUser(String user) throws SubscriptionException {
-        List<Subscription> subList = new ArrayList<Subscription>();
-        try {
-            String queryString = "/jcr:root/" + MAILBOXES_PATH + "//element(*,jamesMailbox:user)[@" + JCRSubscription.USERNAME_PROPERTY + "='" + user + "']";
-
-            QueryManager manager = getSession().getWorkspace().getQueryManager();
-            QueryResult result = manager.createQuery(queryString, Query.XPATH).execute();
-            
-            NodeIterator nodeIt = result.getNodes();
-            while (nodeIt.hasNext()) {
-                Node node = nodeIt.nextNode();
-                if (node.hasProperty(JCRSubscription.MAILBOXES_PROPERTY)) {
-                    Value[] values = node.getProperty(JCRSubscription.MAILBOXES_PROPERTY).getValues();
-                    for (int i = 0; i < values.length; i++) {
-                        subList.add(new JCRSubscription(node, values[i].getString(), getLogger()));
+            Node inboxNode = findInboxNode(owner);
+            if (inboxNode != null && inboxNode.hasProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP)) {
+                MailboxNameCodec mailboxNameCodec = repository.getMailboxNameAttributeCodec();
+                String encodedMailboxName = mailboxNameCodec.encode(mailbox);
+                Value[] values = inboxNode.getProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP).getValues();
+                if (values != null) {
+                    for (Value value : values) {
+                        if (encodedMailboxName.equals(value.getString())) {
+                            return new JCRSubscription(inboxNode, mailbox, mailboxNameCodec, getLogger());
+                        }
                     }
                 }
             }
+            return null;
         } catch (PathNotFoundException e) {
-            // Do nothing just return the empty list later
+            return null;
         } catch (RepositoryException e) {
             throw new SubscriptionException(e);
         }
-        return subList;
+    }
+    
+    protected Node findSubscriptionNodeForUser(MailboxOwner owner, MailboxName mailbox) throws RepositoryException {
+        
+        
+        MailboxNameCodec mailboxNameCodec = repository.getMailboxNameAttributeCodec();
+        String encodedMailboxName = mailboxNameCodec.encode(mailbox);
+        
+        JCRXPathQueryBuilder pb = new JCRXPathQueryBuilder(128).mailboxes();
+        appendInboxPath(pb, owner);
+        
+        pb.eq(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP, encodedMailboxName);
 
+        Query query = pb.bind(getSession().getWorkspace());
+        QueryResult result = query.execute();
+
+        NodeIterator nodeIt = result.getNodes();
+        if (nodeIt.hasNext()) {
+            return nodeIt.nextNode();
+        }
+        else {
+            return null;
+        }
     }
 
-
-    
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.apache.james.mailbox.store.user.SubscriptionMapper#save(org.apache.james
-     * .imap.store.user.model.Subscription)
+    /**
+     * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser
+     *      (java.lang.String)
      */
-    public void save(Subscription subscription) throws SubscriptionException {
-        String username = subscription.getUser();
-        String mailbox = subscription.getMailbox();
+    @Override
+    public List<Subscription> findSubscriptionsForUser(MailboxOwner owner) throws SubscriptionException {
         try {
-
-            Node node = null;
-         
-            JCRSubscription sub = (JCRSubscription) findMailboxSubscriptionForUser(username, mailbox);
-            
-            // its a new subscription
-            if (sub == null) {
-                node = JcrUtils.getOrAddNode(getSession().getRootNode(), MAILBOXES_PATH);
-                node = JcrUtils.getOrAddNode(node, Text.escapeIllegalJcrChars(MailboxConstants.USER_NAMESPACE));
-
-                // This is needed to minimize the child nodes a bit
-                node = createUserPathStructure(node, Text.escapeIllegalJcrChars(username));
-            } else {
-                node = sub.getNode();
+            Node inboxNode = findInboxNode(owner);
+            if (inboxNode != null && inboxNode.hasProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP)) {
+                Value[] values = inboxNode.getProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP).getValues();
+                if (values != null) {
+                    MailboxNameCodec mailboxNameCodec = repository.getMailboxNameAttributeCodec();
+                    List<Subscription> subscriptions = new ArrayList<Subscription>(values.length + 1);
+                    for (Value value : values) {
+                        MailboxName mailboxName = mailboxNameCodec.decode(value.getString(), true);
+                        subscriptions.add(new JCRSubscription(inboxNode, mailboxName, mailboxNameCodec, getLogger()));
+                    }
+                    return subscriptions;
+                }
             }
-            
-            // Copy new properties to the node
-            ((JCRSubscription)subscription).merge(node);
+            return Collections.emptyList();
+        } catch (PathNotFoundException e) {
+            // Do nothing just return the empty list
+            return Collections.emptyList();
+        } catch (RepositoryException e) {
+            throw new SubscriptionException(e);
+        }
+    }
 
+    /**
+     * @see org.apache.james.mailbox.store.user.SubscriptionMapper#save(org.apache.james
+     *      .imap.store.user.model.Subscription)
+     */
+    @Override
+    public void save(Subscription subscription) throws SubscriptionException {
+        try {
+            String user = subscription.getUser();
+            final MailboxOwner owner;
+            if (user.equals(mSession.getUser().getUserName())) {
+                owner = mSession.getOwner();
+            }
+            else {
+                owner = mSession.getMailboxNameResolver().getOwner(user, false);
+            }
+            Node inboxNode = getOrAddInboxNode(owner);
+            ((JCRSubscription) subscription).merge(inboxNode);
         } catch (RepositoryException e) {
             throw new SubscriptionException(e);
         }

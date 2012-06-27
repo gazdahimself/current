@@ -42,7 +42,9 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.slf4j.Logger;
 
 public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
@@ -59,16 +61,19 @@ public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(AppendRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final String mailboxName = request.getMailboxName();
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
         final InputStream messageIn = request.getMessage();
         final Date datetime = request.getDatetime();
         final Flags flags = request.getFlags();
-        final MailboxPath mailboxPath = buildFullPath(session, mailboxName);
+        
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final MailboxName mailboxPath = nameResolver.resolve(mailboxName, mailboxSession.getUser().getUserName());
 
         try {
 
             final MailboxManager mailboxManager = getMailboxManager();
-            final MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
+            final MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, mailboxSession);
             appendToMailbox(messageIn, datetime, flags, session, tag, command, mailbox, responder, mailboxPath);
         } catch (MailboxNotFoundException e) {
             // consume message on exception
@@ -126,7 +131,7 @@ public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
         no(command, tag, responder, HumanReadableText.FAILURE_NO_SUCH_MAILBOX, StatusResponse.ResponseCode.tryCreate());
     }
 
-    private void appendToMailbox(final InputStream message, final Date datetime, final Flags flagsToBeSet, final ImapSession session, final String tag, final ImapCommand command, final MessageManager mailbox, Responder responder, final MailboxPath mailboxPath) {
+    private void appendToMailbox(final InputStream message, final Date datetime, final Flags flagsToBeSet, final ImapSession session, final String tag, final ImapCommand command, final MessageManager mailbox, Responder responder, final MailboxName mailboxPath) {
         try {
             final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
             final SelectedMailbox selectedMailbox = session.getSelected();

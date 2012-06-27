@@ -20,9 +20,10 @@ package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.message.IdRange;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 public class ExamineRequest extends AbstractMailboxSelectionRequest {
-    public ExamineRequest(final ImapCommand command, final String mailboxName, final boolean condstore, final Long lastKnownUidValidity, final Long knownModSeq, final IdRange[] uidSet, final IdRange[] knownUidSet, final IdRange[] knownSequenceSet, final String tag) {
+    public ExamineRequest(final ImapCommand command, final UnresolvedMailboxName mailboxName, final boolean condstore, final Long lastKnownUidValidity, final Long knownModSeq, final IdRange[] uidSet, final IdRange[] knownUidSet, final IdRange[] knownSequenceSet, final String tag) {
         super(command, mailboxName, condstore, lastKnownUidValidity, knownModSeq, uidSet, knownUidSet, knownSequenceSet, tag);
     }
 

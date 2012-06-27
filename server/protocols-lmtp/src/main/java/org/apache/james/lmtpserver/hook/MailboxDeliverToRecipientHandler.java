@@ -27,7 +27,7 @@ import javax.annotation.Resource;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.protocols.lib.Slf4jLoggerAdapter;
 import org.apache.james.protocols.lmtp.hook.DeliverToRecipientHook;
 import org.apache.james.protocols.smtp.MailAddress;
@@ -74,7 +74,7 @@ public class MailboxDeliverToRecipientHandler implements DeliverToRecipientHook 
             }
 
             MailboxSession mailboxSession = mailboxManager.createSystemSession(username, new Slf4jLoggerAdapter(session.getLogger()));
-            MailboxPath inbox = MailboxPath.inbox(mailboxSession);
+            MailboxName inbox = mailboxSession.getMailboxNameResolver().getInbox(mailboxSession.getOwner());
 
             mailboxManager.startProcessingRequest(mailboxSession);
 
@@ -82,7 +82,7 @@ public class MailboxDeliverToRecipientHandler implements DeliverToRecipientHook 
             if (mailboxManager.mailboxExists(inbox, mailboxSession) == false) {
                 mailboxManager.createMailbox(inbox, mailboxSession);
             }
-            mailboxManager.getMailbox(MailboxPath.inbox(mailboxSession), mailboxSession).appendMessage(envelope.getMessageInputStream(), new Date(), mailboxSession, true, null);
+            mailboxManager.getMailbox(inbox, mailboxSession).appendMessage(envelope.getMessageInputStream(), new Date(), mailboxSession, true, null);
             mailboxManager.endProcessingRequest(mailboxSession);
             result = new HookResult(HookReturnCode.OK, SMTPRetCode.MAIL_OK, DSNStatus.getStatus(DSNStatus.SUCCESS, DSNStatus.CONTENT_OTHER) + " Message received");
 

@@ -22,6 +22,7 @@ import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.message.request.XListRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * Parse XLIST commands
@@ -33,7 +34,7 @@ public class XListCommandParser extends ListCommandParser {
     }
 
     @Override
-    protected ImapMessage createMessage(ImapCommand command, final String referenceName, final String mailboxPattern, final String tag) {
+    protected ImapMessage createMessage(ImapCommand command, final UnresolvedMailboxName referenceName, final UnresolvedMailboxName mailboxPattern, final String tag) {
         final ImapMessage result = new XListRequest(command, referenceName, mailboxPattern, tag);
         return result;
     }

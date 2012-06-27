@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -44,17 +43,16 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.acl.MailboxACL.EditMode;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.Headers;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
@@ -63,6 +61,11 @@ import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.MimeDescriptor;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.junit.Test;
 import org.slf4j.Logger;
 
@@ -71,11 +74,11 @@ public class MailboxEventAnalyserTest {
     private static final long BASE_SESSION_ID = 99;
 
     
-    private MailboxPath mailboxPath = new MailboxPath("namespace", "user", "name");
+    private MailboxName mailboxPath = new MailboxNameBuilder(2).add("#users").add("test").qualified(true);
     private final MailboxManager mockManager = new MailboxManager() {
         
         
-        public void removeListener(MailboxPath mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException {
+        public void removeListener(MailboxName mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException {
             
         }
         
@@ -85,7 +88,7 @@ public class MailboxEventAnalyserTest {
         }
         
         
-        public void addListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
+        public void addListener(MailboxName mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
             
         }
         
@@ -111,13 +114,13 @@ public class MailboxEventAnalyserTest {
         }
         
         
-        public void renameMailbox(MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException {
+        public void renameMailbox(MailboxName from, MailboxName to, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
             
         }
         
         
-        public boolean mailboxExists(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+        public boolean mailboxExists(MailboxName mailboxPath, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
 
         }
@@ -135,12 +138,12 @@ public class MailboxEventAnalyserTest {
         }
         
         
-        public List<MailboxPath> list(MailboxSession session) throws MailboxException {
+        public List<MailboxName> list(MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
         }
         
         
-        public MessageManager getMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+        public MessageManager getMailbox(MailboxName mailboxPath, MailboxSession session) throws MailboxException {
             return new MessageManager() {
 
                 
@@ -319,32 +322,25 @@ public class MailboxEventAnalyserTest {
             };
         }
         
-        
-        public char getDelimiter() {
-            return '.';
-        }
-        
-        
-        public void deleteMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+        public void deleteMailbox(MailboxName mailboxPath, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
 
         }
-        
         
         public MailboxSession createSystemSession(String userName, Logger log) throws BadCredentialsException, MailboxException {
             throw new UnsupportedOperationException("Not implemented");
         }
         
-        
-        public void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
+        public void createMailbox(MailboxName mailboxPath, MailboxSession mailboxSession) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
-            
         }
         
-        
-        public List<MessageRange> copyMessages(MessageRange set, MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException {
+        public List<MessageRange> copyMessages(MessageRange set, MailboxName from, MailboxName to, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
+        }
 
+        public MailboxNameResolver getMailboxNameResolver() {
+            throw new UnsupportedOperationException("Not implemented");
         }
     };
     private final class MyMailboxSession implements MailboxSession {
@@ -372,22 +368,6 @@ public class MailboxEventAnalyserTest {
             return null;
         }
 
-        public String getOtherUsersSpace() {
-            return null;
-        }
-
-        public char getPathDelimiter() {
-            return 0;
-        }
-
-        public String getPersonalSpace() {
-            return null;
-        }
-
-        public Collection<String> getSharedSpaces() {
-            return null;
-        }
-
         public User getUser() {
             return null;
         }
@@ -399,8 +379,14 @@ public class MailboxEventAnalyserTest {
         public SessionType getType() {
             return SessionType.System;
         }
-        
-        
+
+        public MailboxNameResolver getMailboxNameResolver() {
+            throw new UnsupportedOperationException();
+        }
+
+        public MailboxOwner getOwner() {
+            throw new UnsupportedOperationException();
+        }
     }
     
     private class MyImapSession implements ImapSession{
@@ -481,12 +467,17 @@ public class MailboxEventAnalyserTest {
         }
 
         public boolean supportMultipleNamespaces() {
-            return false;
+            return true;
         }
 
         public boolean isCompressionActive() {
             return false;
         }
+        
+        public MailboxNameCodec getMailboxNameCodec() {
+            return null;
+        }
+
     };
     
 
@@ -498,7 +489,9 @@ public class MailboxEventAnalyserTest {
         
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
 
-        final MailboxListener.Event event = new MailboxListener.Event(mSession, mailboxPath) {};
+        final MailboxListener.Event event = new MailboxListener.Event(mSession, mailboxPath) {
+            private static final long serialVersionUID = 1L;
+        };
       
         analyser.event(event);
         assertFalse(analyser.isSizeChanged());
@@ -633,10 +626,4 @@ public class MailboxEventAnalyserTest {
         assertFalse(iterator.hasNext());
     }
 
-    /**
-     * @see org.apache.james.mailbox.MessageManager#myRights(org.apache.james.mailbox.MailboxSession)
-     */
-    public MailboxACLRights myRights(MailboxSession session) throws MailboxException {
-        return null;
-    }
 }

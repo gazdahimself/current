@@ -22,6 +22,7 @@ package org.apache.james.imap.message.request;
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.message.request.ImapRequest;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * {@link ImapRequest} which selects a Mailbox. 
@@ -29,7 +30,7 @@ import org.apache.james.imap.api.message.request.ImapRequest;
  * This supports also the <code>CONDSTORE</code> and the <code>QRESYNC</code> extension
  */
 public abstract class AbstractMailboxSelectionRequest extends AbstractImapRequest {
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
     private final boolean condstore;
     private Long lastKnownUidValidity;
     private Long knownModSeq;
@@ -37,7 +38,7 @@ public abstract class AbstractMailboxSelectionRequest extends AbstractImapReques
     private IdRange[] knownUidSet;
     private IdRange[] knownSequenceSet;
 
-    public AbstractMailboxSelectionRequest(final ImapCommand command, final String mailboxName, final boolean condstore, final Long lastKnownUidValidity, final Long knownModSeq, final IdRange[] uidSet, final IdRange[] knownUidSet, final IdRange[] knownSequenceSet, final String tag) {
+    public AbstractMailboxSelectionRequest(final ImapCommand command, final UnresolvedMailboxName mailboxName, final boolean condstore, final Long lastKnownUidValidity, final Long knownModSeq, final IdRange[] uidSet, final IdRange[] knownUidSet, final IdRange[] knownSequenceSet, final String tag) {
         super(tag, command);
         this.mailboxName = mailboxName;
         this.condstore = condstore;
@@ -56,7 +57,7 @@ public abstract class AbstractMailboxSelectionRequest extends AbstractImapReques
      * 
      * @return mailboxName
      */
-    public final String getMailboxName() {
+    public final UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
     

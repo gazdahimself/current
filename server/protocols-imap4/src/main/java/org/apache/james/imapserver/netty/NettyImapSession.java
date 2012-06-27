@@ -27,6 +27,7 @@ import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.process.ImapLineHandler;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.protocols.api.logger.ProtocolLoggerAdapter;
 import org.apache.james.protocols.api.logger.ProtocolSessionLogger;
 import org.apache.james.protocols.lib.Slf4jLoggerAdapter;
@@ -49,6 +50,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     private Channel channel;
     private int handlerCount;
     private boolean plainAuthDisallowed;
+    private MailboxNameCodec mailboxNameCodec;
 
     public NettyImapSession(Channel channel, Logger log, SSLContext sslContext, String[] enabledCipherSuites, boolean compress, boolean plainAuthDisallowed) {
         this.channel = channel;
@@ -57,6 +59,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
         this.enabledCipherSuites = enabledCipherSuites;
         this.compress = compress;
         this.plainAuthDisallowed = plainAuthDisallowed;
+        this.mailboxNameCodec = MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC;
     }
 
     /**
@@ -251,7 +254,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
      * @see org.apache.james.imap.api.process.ImapSession#supportMultipleNamespaces()
      */
     public boolean supportMultipleNamespaces() {
-        return false;
+        return true;
     }
 
     /**
@@ -259,6 +262,10 @@ public class NettyImapSession implements ImapSession, NettyConstants {
      */
     public boolean isCompressionActive() {
         return channel.getPipeline().get(ZLIB_DECODER) != null;
+    }
+
+    public MailboxNameCodec getMailboxNameCodec() {
+        return mailboxNameCodec;
     }
 
 }

@@ -78,4 +78,8 @@ public class JCRUtils implements JCRImapConstants{
         }
     }
     
+    public static String fq(String prefix, String name) {
+        return prefix + JCRImapConstants.NS_PREFIX_DELIMITER + name;
+    }
+    
 }

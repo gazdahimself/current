@@ -18,13 +18,21 @@
  ****************************************************************/
 package org.apache.james.pop3server;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
 import javax.mail.Flags;
+
 import org.apache.commons.net.pop3.POP3Client;
 import org.apache.commons.net.pop3.POP3MessageInfo;
 import org.apache.commons.net.pop3.POP3Reply;
@@ -37,8 +45,7 @@ import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.pop3server.netty.POP3Server;
@@ -48,7 +55,6 @@ import org.apache.james.protocols.lib.mock.MockProtocolHandlerLoader;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.lib.mock.MockUsersRepository;
 import org.junit.After;
-import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -253,12 +259,14 @@ public class POP3ServerTest {
         assertEquals("Found unexpected messages", 0, list.length);
 
         m_pop3Protocol.disconnect();
-        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo", "INBOX");
-        MailboxSession session = manager.login("foo", "bar", LoggerFactory.getLogger("Test"));
-        if (manager.mailboxExists(mailboxPath, session) == false) {
-            manager.createMailbox(mailboxPath, session);
+        
+        String user = "foo";
+        MailboxSession session = manager.login(user, "bar", LoggerFactory.getLogger("Test"));
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
+        if (manager.mailboxExists(inbox, session) == false) {
+            manager.createMailbox(inbox, session);
         }
-        setupTestMails(session, manager.getMailbox(mailboxPath, session));
+        setupTestMails(session, manager.getMailbox(inbox, session));
 
         m_pop3Protocol.connect("127.0.0.1", m_pop3ListenerPort);
         m_pop3Protocol.login("foo", "bar");
@@ -269,7 +277,7 @@ public class POP3ServerTest {
         POP3MessageInfo p3i = m_pop3Protocol.listUniqueIdentifier(1);
         assertNotNull(p3i);
 
-        manager.deleteMailbox(mailboxPath, session);
+        manager.deleteMailbox(inbox, session);
 
     }
 
@@ -336,14 +344,15 @@ public class POP3ServerTest {
 
         m_usersRepository.addUser("foo2", "bar2");
 
-        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = manager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        String user = "foo2";
+        MailboxSession session = manager.login(user, "bar2", LoggerFactory.getLogger("Test"));
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
 
-        if (manager.mailboxExists(mailboxPath, session) == false) {
-            manager.createMailbox(mailboxPath, session);
+        if (manager.mailboxExists(inbox, session) == false) {
+            manager.createMailbox(inbox, session);
         }
 
-        setupTestMails(session, manager.getMailbox(mailboxPath, session));
+        setupTestMails(session, manager.getMailbox(inbox, session));
 
         m_pop3Protocol.sendCommand("retr", "1");
         assertEquals(0, m_pop3Protocol.getState());
@@ -409,7 +418,7 @@ public class POP3ServerTest {
         Reader r3 = m_pop3Protocol.retrieveMessageTop(entries[0].number, 0);
         assertNotNull(r3);
         r3.close();
-        manager.deleteMailbox(mailboxPath, session);
+        manager.deleteMailbox(inbox, session);
     }
 
     private void setupTestMails(MailboxSession session, MessageManager mailbox) throws MailboxException {
@@ -427,18 +436,20 @@ public class POP3ServerTest {
         m_pop3Protocol = new POP3Client();
         m_pop3Protocol.connect("127.0.0.1", m_pop3ListenerPort);
 
-        m_usersRepository.addUser("foo2", "bar2");
+        String user = "foo2";
+        String password = "bar2";
+        m_usersRepository.addUser(user, password);
 
-        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = manager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        MailboxSession session = manager.login(user, password, LoggerFactory.getLogger("Test"));
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
 
-        if (manager.mailboxExists(mailboxPath, session) == false) {
-            manager.createMailbox(mailboxPath, session);
+        if (!manager.mailboxExists(inbox, session)) {
+            manager.createMailbox(inbox, session);
         }
 
         int msgCount = 100;
         for (int i = 0; i < msgCount; i++) {
-            manager.getMailbox(mailboxPath, session).appendMessage(new ByteArrayInputStream(("Subject: test\r\n\r\n" + i).
+            manager.getMailbox(inbox, session).appendMessage(new ByteArrayInputStream(("Subject: test\r\n\r\n" + i).
                     getBytes()), new Date(), session, true, new Flags());
         }
 
@@ -460,7 +471,7 @@ public class POP3ServerTest {
         m_pop3Protocol.login("foo2", "bar2");
         assertEquals(1, m_pop3Protocol.getState());
 
-        manager.deleteMailbox(mailboxPath, session);
+        manager.deleteMailbox(inbox, session);
     }
 
     // Test for JAMES-1202
@@ -473,18 +484,20 @@ public class POP3ServerTest {
         m_pop3Protocol = new POP3Client();
         m_pop3Protocol.connect("127.0.0.1", m_pop3ListenerPort);
 
-        m_usersRepository.addUser("foo2", "bar2");
+        String user = "foo2";
+        String password = "bar2";
+        m_usersRepository.addUser(user, password);
 
-        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = manager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        MailboxSession session = manager.login(user, password, LoggerFactory.getLogger("Test"));
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
 
-        if (manager.mailboxExists(mailboxPath, session) == false) {
-            manager.createMailbox(mailboxPath, session);
+        if (!manager.mailboxExists(inbox, session)) {
+            manager.createMailbox(inbox, session);
         }
 
         int msgCount = 100;
         for (int i = 0; i < msgCount; i++) {
-            manager.getMailbox(mailboxPath, session).appendMessage(new ByteArrayInputStream(("Subject: test\r\n\r\n" + i).
+            manager.getMailbox(inbox, session).appendMessage(new ByteArrayInputStream(("Subject: test\r\n\r\n" + i).
                     getBytes()), new Date(), session, true, new Flags());
         }
 
@@ -546,7 +559,7 @@ public class POP3ServerTest {
         m_pop3Protocol2.sendCommand("quit");
         m_pop3Protocol2.disconnect();
 
-        manager.deleteMailbox(mailboxPath, session);
+        manager.deleteMailbox(inbox, session);
     }
 
     /*
@@ -674,14 +687,15 @@ public class POP3ServerTest {
         m_pop3Protocol = new POP3Client();
         m_pop3Protocol.connect("127.0.0.1", m_pop3ListenerPort);
 
-        m_usersRepository.addUser("foo6", "bar6");
-        MailboxSession session = manager.login("foo6", "bar6", LoggerFactory.getLogger("Test"));
+        String user = "foo6";
+        String password = "bar6";
+        m_usersRepository.addUser(user, password);
 
-        MailboxPath mailboxPath = MailboxPath.inbox(session);
+        MailboxSession session = manager.login(user, password, LoggerFactory.getLogger("Test"));
+        MailboxName inbox = session.getMailboxNameResolver().getInbox(session.getOwner());
 
-        manager.startProcessingRequest(session);
-        if (manager.mailboxExists(mailboxPath, session) == false) {
-            manager.createMailbox(mailboxPath, session);
+        if (!manager.mailboxExists(inbox, session)) {
+            manager.createMailbox(inbox, session);
         }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -702,7 +716,7 @@ public class POP3ServerTest {
         out.write(bigMail);
         bigMail = null;
 
-        manager.getMailbox(mailboxPath, session).appendMessage(new ByteArrayInputStream(out.toByteArray()), new Date(),
+        manager.getMailbox(inbox, session).appendMessage(new ByteArrayInputStream(out.toByteArray()), new Date(),
                 session, false, new Flags());
         manager.startProcessingRequest(session);
 
@@ -719,7 +733,7 @@ public class POP3ServerTest {
 
         assertNotNull(r);
         r.close();
-        manager.deleteMailbox(mailboxPath, session);
+        manager.deleteMailbox(inbox, session);
 
     }
 }

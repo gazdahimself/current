@@ -22,11 +22,12 @@ package org.apache.james.mailbox.model;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.NameType;
+import org.apache.james.mailbox.acl.MailboxACL.SpecialName;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.MailboxACL.SpecialName;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.junit.Test;
 
 /**

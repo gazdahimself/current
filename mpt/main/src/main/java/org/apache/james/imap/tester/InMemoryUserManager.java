@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Stores users in memory.
@@ -49,18 +50,17 @@ public class InMemoryUserManager implements SubscriptionManager {
         return result;
     }
 
-    public void subscribe(MailboxSession session, String mailbox)
-            throws SubscriptionException {
+    public void subscribe(MailboxSession session, MailboxName mailboxName) throws SubscriptionException {
         MailboxSession.User u = session.getUser();
         User user = (User) users.get(u.getUserName());
         if (user == null) {
             user = new User(u.getUserName());
             users.put(u.getUserName(), user);
         }
-        user.addSubscription(mailbox);
+        user.addSubscription(mailboxName);
     }
 
-    public Collection<String> subscriptions(org.apache.james.mailbox.MailboxSession session) throws SubscriptionException {
+    public Collection<MailboxName> subscriptions(org.apache.james.mailbox.MailboxSession session) throws SubscriptionException {
         MailboxSession.User u = session.getUser();
         User user = (User) users.get(u.getUserName());
         if (user == null) {
@@ -70,15 +70,14 @@ public class InMemoryUserManager implements SubscriptionManager {
         return user.getSubscriptions();
     }
 
-    public void unsubscribe(org.apache.james.mailbox.MailboxSession session, String mailbox)
-            throws SubscriptionException {
+    public void unsubscribe(MailboxSession session, MailboxName mailboxName) throws SubscriptionException {
         MailboxSession.User u = session.getUser();
         User user = (User) users.get(u.getUserName());
         if (user == null) {
             user = new User(u.getUserName());
             users.put(u.getUserName(), user);
         }
-        user.removeSubscription(mailbox);
+        user.removeSubscription(mailboxName);
     }
 
     public void addUser(String userid, CharSequence password) {

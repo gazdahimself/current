@@ -20,6 +20,7 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * LISTRIGHTS Request.
@@ -28,9 +29,9 @@ import org.apache.james.imap.api.ImapCommand;
  */
 public class ListRightsRequest extends AbstractImapRequest {
     private final String identifier;
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
 
-    public ListRightsRequest(String tag, ImapCommand command, String mailboxName, String identifier) {
+    public ListRightsRequest(String tag, ImapCommand command, UnresolvedMailboxName mailboxName, String identifier) {
         super(tag, command);
         this.mailboxName = mailboxName;
         this.identifier = identifier;
@@ -40,7 +41,7 @@ public class ListRightsRequest extends AbstractImapRequest {
         return identifier;
     }
 
-    public String getMailboxName() {
+    public UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 

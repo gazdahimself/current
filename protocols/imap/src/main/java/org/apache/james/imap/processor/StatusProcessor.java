@@ -32,7 +32,9 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.slf4j.Logger;
 
 public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
@@ -50,10 +52,12 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(StatusRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = buildFullPath(session, request.getMailboxName());
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
+        final MailboxName mailboxPath = nameResolver.resolve(mailboxName , mailboxSession.getUser().getUserName());
         final StatusDataItems statusDataItems = request.getStatusDataItems();
         final Logger logger = session.getLog();
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
 
         try {
             if (logger != null && logger.isDebugEnabled()) {

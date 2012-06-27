@@ -20,12 +20,13 @@ package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * Values an IMAP4rev1 <code>LIST</code> response.
  */
 public final class LSubResponse extends AbstractListingResponse implements ImapResponseMessage {
-    public LSubResponse(final String name, final boolean noSelect, final char delimiter) {
+    public LSubResponse(final UnresolvedMailboxName name, final boolean noSelect, final char delimiter) {
         super(false, noSelect, false, false, false, false, name, delimiter, MailboxType.OTHER);
     }
 }

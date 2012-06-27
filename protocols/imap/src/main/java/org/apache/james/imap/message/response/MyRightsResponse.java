@@ -21,7 +21,8 @@ package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * MYRIGHTS Response.
@@ -29,10 +30,10 @@ import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
  * @author Peter Palaga
  */
 public final class MyRightsResponse implements ImapResponseMessage {
-    private final String mailboxName;
+    private final UnresolvedMailboxName mailboxName;
     private final MailboxACLRights myRights;
 
-    public MyRightsResponse(String mailboxName, MailboxACLRights myRights) {
+    public MyRightsResponse(UnresolvedMailboxName mailboxName, MailboxACLRights myRights) {
         super();
         this.mailboxName = mailboxName;
         this.myRights = myRights;
@@ -49,7 +50,7 @@ public final class MyRightsResponse implements ImapResponseMessage {
         return false;
     }
 
-    public String getMailboxName() {
+    public UnresolvedMailboxName getMailboxName() {
         return mailboxName;
     }
 

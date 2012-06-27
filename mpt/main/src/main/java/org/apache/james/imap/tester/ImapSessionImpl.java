@@ -25,6 +25,7 @@ import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.process.ImapLineHandler;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.slf4j.Logger;
 
 public class ImapSessionImpl implements ImapSession{
@@ -37,6 +38,8 @@ public class ImapSessionImpl implements ImapSession{
     private final Map<String, Object> attributesByKey;
 
 	private Logger log;
+
+    private final MailboxNameCodec mailboxNameCodec = MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC;
 
     public ImapSessionImpl(Logger log) {
         this.attributesByKey = new ConcurrentHashMap<String, Object>();
@@ -137,5 +140,11 @@ public class ImapSessionImpl implements ImapSession{
     public boolean isCompressionActive() {
         return false;
     }
+
+    public MailboxNameCodec getMailboxNameCodec() {
+        return mailboxNameCodec ;
+    }
+    
+    
 
 }

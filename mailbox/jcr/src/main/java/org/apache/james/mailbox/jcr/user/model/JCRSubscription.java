@@ -20,15 +20,14 @@
 package org.apache.james.mailbox.jcr.user.model;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
 
 import org.apache.james.mailbox.jcr.JCRImapConstants;
 import org.apache.james.mailbox.jcr.Persistent;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.user.model.Subscription;
 import org.slf4j.Logger;
 
@@ -38,25 +37,25 @@ import org.slf4j.Logger;
 public class JCRSubscription implements Subscription, Persistent, JCRImapConstants {
     private static final String TOSTRING_SEPARATOR = " ";
 
-    public final static String USERNAME_PROPERTY = "jamesMailbox:user";
-    public final static String MAILBOXES_PROPERTY =  "jamesMailbox:subscriptionMailboxes";
-    
     private Node node;
     private final Logger log;
-    private String mailbox;
+    private final MailboxName mailbox;
     private String username;
+    private final MailboxNameCodec mailboxNameCodec;
 
     
-    public JCRSubscription(Node node, String mailbox, Logger log) {
+    public JCRSubscription(Node node, MailboxName mailbox, MailboxNameCodec mailboxNameCodec, Logger log) {
         this.node = node;
         this.log = log;
         this.mailbox = mailbox;
+        this.mailboxNameCodec = mailboxNameCodec;
     }
 
-    public JCRSubscription(String username, String mailbox, Logger log) {
+    public JCRSubscription(String username, MailboxName mailbox, MailboxNameCodec mailboxNameCodec, Logger log) {
         this.username = username;
         this.mailbox = mailbox;
         this.log = log;
+        this.mailboxNameCodec = mailboxNameCodec;
     }
 
     /*
@@ -64,7 +63,7 @@ public class JCRSubscription implements Subscription, Persistent, JCRImapConstan
      * 
      * @see org.apache.james.mailbox.store.user.model.Subscription#getMailbox()
      */
-    public String getMailbox() {
+    public MailboxName getMailbox() {
         return mailbox;
     }
 
@@ -76,9 +75,9 @@ public class JCRSubscription implements Subscription, Persistent, JCRImapConstan
     public String getUser() {
         if (isPersistent()) {
             try {
-                return node.getProperty(USERNAME_PROPERTY).getString();
+                return node.getProperty(JCRImapConstants.SUBSCRIPTION_USER_PROP).getString();
             } catch (RepositoryException e) {
-                log.error("Unable to access Property " + USERNAME_PROPERTY, e);
+                log.error("Unable to access Property " + JCRImapConstants.SUBSCRIPTION_USER_PROP, e);
             }
             return null;
         }
@@ -108,22 +107,27 @@ public class JCRSubscription implements Subscription, Persistent, JCRImapConstan
      * @see org.apache.james.mailbox.jcr.IsPersistent#merge(javax.jcr.Node)
      */
     public void merge(Node node) throws RepositoryException{
-        node.setProperty(USERNAME_PROPERTY, getUser());
-        if (node.hasProperty(MAILBOXES_PROPERTY)) {
-            Value[] mailboxes = node.getProperty(MAILBOXES_PROPERTY).getValues();
-            List<String>newMailboxes = new ArrayList<String>();
-            for (int i = 0; i< mailboxes.length; i++) {
+        node.setProperty(JCRImapConstants.SUBSCRIPTION_USER_PROP, getUser());
+        String encodedMailboxName = mailboxNameCodec.encode(mailbox);
+        if (node.hasProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP)) {
+            Value[] mailboxes = node.getProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP).getValues();
+            String[] newMailboxes = new String[mailboxes.length + 1];
+            boolean found = false;
+            int i = 0;
+            for (; i< mailboxes.length; i++) {
                 String m = mailboxes[i].getString();
-                newMailboxes.add(m);
+                if (encodedMailboxName.equals(m)) {
+                    found = true;
+                    break;
+                }
+                newMailboxes[i] = m;
             }
-            if (newMailboxes.contains(getMailbox()) == false) {
-                newMailboxes.add(getMailbox());
-
+            if (!found) {
+                newMailboxes[i] = encodedMailboxName;
+                node.setProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP, newMailboxes);
             }
-            
-            node.setProperty(MAILBOXES_PROPERTY, newMailboxes.toArray(new String[newMailboxes.size()]));
         } else {
-            node.setProperty(MAILBOXES_PROPERTY, new String[] {getMailbox()});
+            node.setProperty(JCRImapConstants.SUBSCRIPTION_MAILBOXES_PROP, new String[] {encodedMailboxName});
         }
         this.node = node;
     }

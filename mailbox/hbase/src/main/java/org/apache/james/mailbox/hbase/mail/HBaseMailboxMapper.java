@@ -22,8 +22,6 @@ import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOXES_TABLE;
 import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_CF;
 import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_MESSAGE_COUNT;
 import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_NAME;
-import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_NAMESPACE;
-import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_USER;
 import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_META_CF;
 import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_TABLE;
 import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_INTERNALDATE;
@@ -31,89 +29,168 @@ import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxFromResult;
 import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxRowKey;
 import static org.apache.james.mailbox.hbase.HBaseUtils.toPut;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.filter.SubstringComparator;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.hbase.HBaseNames;
 import org.apache.james.mailbox.hbase.HBaseNonTransactionalMapper;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 /**
  * Data access management for mailbox.
- *
+ * 
  */
 public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements MailboxMapper<UUID> {
+
+    protected static class PatternComparator extends WritableByteArrayComparable {
+        private byte[] value;
+
+        public byte[] getValue() {
+            return value;
+        }
+
+        private static final Log LOG = LogFactory.getLog(PatternComparator.class);
+
+        private Charset charset = Charset.forName(HConstants.UTF8_ENCODING);
+
+        private Pattern pattern;
+
+        /** Nullary constructor for Writable, do not use */
+        public PatternComparator() {
+        }
+
+        /**
+         * Constructor
+         * 
+         * @param expr
+         *            a valid regular expression
+         */
+        public PatternComparator(String expr) {
+            super(Bytes.toBytes(expr));
+            this.pattern = Pattern.compile(expr);
+        }
+
+        /**
+         * Specifies the {@link Charset} to use to convert the row key to a
+         * String.
+         * <p>
+         * The row key needs to be converted to a String in order to be matched
+         * against the regular expression. This method controls which charset is
+         * used to do this conversion.
+         * <p>
+         * If the row key is made of arbitrary bytes, the charset
+         * {@code ISO-8859-1} is recommended.
+         * 
+         * @param charset
+         *            The charset to use.
+         */
+        public void setCharset(final Charset charset) {
+            this.charset = charset;
+        }
+
+        @Override
+        public int compareTo(byte[] value) {
+            String str = new String(value, charset);
+            if (pattern.matcher(str).matches()) {
+                LOG.info(" - match    " + pattern +"\t"+ str);
+                return 0;
+            }
+            else {
+                LOG.info(" - no match " + pattern +"\t"+ str);
+                return 1;
+            }
+        }
+
+        @Override
+        public void readFields(DataInput in) throws IOException {
+            final String expr = in.readUTF();
+            this.value = Bytes.toBytes(expr);
+            this.pattern = Pattern.compile(expr);
+            final String charset = in.readUTF();
+            if (charset.length() > 0) {
+                try {
+                    this.charset = Charset.forName(charset);
+                } catch (IllegalCharsetNameException e) {
+                    LOG.error("invalid charset", e);
+                }
+            }
+        }
+
+        @Override
+        public void write(DataOutput out) throws IOException {
+            out.writeUTF(pattern.toString());
+            out.writeUTF(charset.name());
+        }
+
+    }
 
     /**
      * Link to the HBase Configuration object and specific mailbox names
      */
     private final Configuration conf;
-    
-    public HBaseMailboxMapper(Configuration conf) {
+    private final MailboxNameCodec mailboxNameCodec;
+    private final MailboxNameResolver mailboxNameResolver;
+
+    public HBaseMailboxMapper(Configuration conf, MailboxNameResolver mailboxNameResolver, MailboxNameCodec mailboxNameCodec) {
         this.conf = conf;
+        this.mailboxNameResolver = mailboxNameResolver;
+        this.mailboxNameCodec = mailboxNameCodec;
     }
-    
+
     @Override
-    public Mailbox<UUID> findMailboxByPath(MailboxPath mailboxPath) throws MailboxException, MailboxNotFoundException {
+    public Mailbox<UUID> findMailboxByPath(MailboxName mailboxPath) throws MailboxException, MailboxNotFoundException {
         HTable mailboxes = null;
         ResultScanner scanner = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            
-            Scan scan = new Scan();
-            scan.addFamily(MAILBOX_CF);
-            scan.setCaching(mailboxes.getScannerCaching() * 2);
-            scan.setMaxVersions(1);
 
-            /*
-             * Filters is ORDERED. Passing the parameters in the right order
-             * might improve performance: passing the user first means that the
-             * other filters will not be tested if the mailbox does not belong
-             * to the passed user.
-             */
-            FilterList filters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
-            
-            if (mailboxPath.getUser() != null) {
-                SingleColumnValueFilter userFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_USER, CompareOp.EQUAL, Bytes.toBytes(mailboxPath.getUser()));
-                filters.addFilter(userFilter);
-            }
-            SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAME, CompareOp.EQUAL, Bytes.toBytes(mailboxPath.getName()));
-            filters.addFilter(nameFilter);
-            SingleColumnValueFilter namespaceFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAMESPACE, CompareOp.EQUAL, Bytes.toBytes(mailboxPath.getNamespace()));
-            filters.addFilter(namespaceFilter);
-            
-            scan.setFilter(filters);
+            SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAME, CompareOp.EQUAL, Bytes.toBytes(mailboxNameCodec.encode(mailboxPath)));
+            Scan scan = prepareMailboxNameScan(mailboxPath, mailboxes, nameFilter);
+
             scanner = mailboxes.getScanner(scan);
             Result result = scanner.next();
-            
+
             if (result == null) {
                 throw new MailboxNotFoundException(mailboxPath);
             }
-            return mailboxFromResult(result);
+            return mailboxFromResult(result, mailboxNameCodec);
         } catch (IOException e) {
             throw new MailboxException("Search of mailbox " + mailboxPath + " failed", e);
         } finally {
-            scanner.close();
+            IOUtils.closeStream(scanner);
             if (mailboxes != null) {
                 try {
                     mailboxes.close();
@@ -123,59 +200,56 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
+    protected Scan prepareMailboxNameScan(MailboxName mailboxPath, HTable mailboxes, Filter nameFilter) {
+        Scan scan = new Scan();
+        scan.addFamily(MAILBOX_CF);
+        scan.setCaching(mailboxes.getScannerCaching() * 2);
+        scan.setMaxVersions(1);
+
+        FilterList filters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
+        /*
+         * Filters is ORDERED. Passing the parameters in the right order might
+         * improve performance: passing the user first means that the other
+         * filters will not be tested if the mailbox does not belong to the
+         * passed user.
+         */
+        MailboxOwner owner = mailboxNameResolver.getOwner(mailboxPath);
+        if (owner != null) {
+            filters.addFilter(new SingleColumnValueFilter(MAILBOX_CF, HBaseNames.MAILBOX_USER, CompareOp.EQUAL, Bytes.toBytes(owner.getName())));
+            filters.addFilter(new SingleColumnValueFilter(MAILBOX_CF, HBaseNames.MAILBOX_OWNER_IS_GROUP, CompareOp.EQUAL, Bytes.toBytes(owner.isGroup())));
+        }
+        filters.addFilter(nameFilter);
+        scan.setFilter(filters);
+        return scan;
+    }
+
+    protected Scan preparePatternScan(MailboxName mailboxPath, HTable mailboxes) {
+        String patternName = MailboxNameCodec.SEARCH_PATTERN_NAME_CODEC.encode(mailboxPath);
+        PatternComparator pathComparator = new PatternComparator(patternName);
+        SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF, HBaseNames.MAILBOX_NAME, CompareOp.EQUAL, pathComparator);
+        return prepareMailboxNameScan(mailboxPath, mailboxes, nameFilter);
+    }
+
     @Override
-    public List<Mailbox<UUID>> findMailboxWithPathLike(MailboxPath mailboxPath) throws MailboxException {
+    public List<Mailbox<UUID>> findMailboxWithPathLike(MailboxName mailboxPath) throws MailboxException {
         HTable mailboxes = null;
         ResultScanner scanner = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            
-            Scan scan = new Scan();
-            scan.addFamily(MAILBOX_CF);
-            scan.setCaching(mailboxes.getScannerCaching() * 2);
-            scan.setMaxVersions(1);
-            
-            FilterList filters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
-            
-            if (mailboxPath.getUser() != null) {
-                SingleColumnValueFilter userFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_USER, CompareOp.EQUAL, Bytes.toBytes(mailboxPath.getUser()));
-                filters.addFilter(userFilter);
-            }
-            SubstringComparator pathComparator;
-            String mboxName = mailboxPath.getName();
-            /*
-             * TODO: use a RegExFiler
-             */
-            if (mboxName.length() >= 1) {
-                if (mboxName.charAt(mboxName.length() - 1) == '%') {
-                    mboxName = mboxName.substring(0, mboxName.length() - 1);
-                }
-            }
-            if (mboxName.length() >= 1) {
-                if (mboxName.charAt(0) == '%') {
-                    mboxName = mboxName.substring(1);
-                }
-            }
-            pathComparator = new SubstringComparator(mboxName);
-            SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAME, CompareOp.EQUAL, pathComparator);
-            filters.addFilter(nameFilter);
-            SingleColumnValueFilter namespaceFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAMESPACE, CompareOp.EQUAL, Bytes.toBytes(mailboxPath.getNamespace()));
-            filters.addFilter(namespaceFilter);
-            
-            scan.setFilter(filters);
+            Scan scan = preparePatternScan(mailboxPath, mailboxes);
             scanner = mailboxes.getScanner(scan);
-            
+
             List<Mailbox<UUID>> mailboxList = new ArrayList<Mailbox<UUID>>();
-            
+
             for (Result result : scanner) {
-                mailboxList.add(mailboxFromResult(result));
+                mailboxList.add(mailboxFromResult(result, mailboxNameCodec));
             }
             return mailboxList;
         } catch (IOException e) {
             throw new MailboxException("Search of mailbox " + mailboxPath + " failed", e);
         } finally {
-            scanner.close();
+            IOUtils.closeStream(scanner);
             if (mailboxes != null) {
                 try {
                     mailboxes.close();
@@ -185,12 +259,13 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     @Override
     public List<Mailbox<UUID>> list() throws MailboxException {
         HTable mailboxes = null;
         ResultScanner scanner = null;
-        //TODO: possible performance isssues, we are creating an object from all the rows in HBase mailbox table
+        // TODO: possible performance isssues, we are creating an object from
+        // all the rows in HBase mailbox table
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
             Scan scan = new Scan();
@@ -199,10 +274,10 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             scan.setMaxVersions(1);
             scanner = mailboxes.getScanner(scan);
             List<Mailbox<UUID>> mailboxList = new ArrayList<Mailbox<UUID>>();
-            
+
             Result result;
             while ((result = scanner.next()) != null) {
-                Mailbox<UUID> mlbx = mailboxFromResult(result);
+                Mailbox<UUID> mlbx = mailboxFromResult(result, mailboxNameCodec);
                 mailboxList.add(mlbx);
             }
             return mailboxList;
@@ -219,21 +294,21 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     @Override
     public void endRequest() {
     }
-    
+
     @Override
     public void save(Mailbox<UUID> mlbx) throws MailboxException {
-        //TODO: maybe switch to checkAndPut for transactions
+        // TODO: maybe switch to checkAndPut for transactions
         HTable mailboxes = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
             /*
              * cast to HBaseMailbox to access lastuid and ModSeq
              */
-            Put put = toPut((HBaseMailbox) mlbx);
+            Put put = toPut((HBaseMailbox) mlbx, mailboxNameCodec);
             mailboxes.put(put);
         } catch (IOException ex) {
             throw new MailboxException("IOExeption", ex);
@@ -247,14 +322,14 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     @Override
     public void delete(Mailbox<UUID> mlbx) throws MailboxException {
-        //TODO: maybe switch to checkAndDelete
+        // TODO: maybe switch to checkAndDelete
         HTable mailboxes = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            //TODO: delete all maessages from this mailbox
+            // TODO: delete all maessages from this mailbox
             Delete delete = new Delete(mailboxRowKey(mlbx.getMailboxId()));
             mailboxes.delete(delete);
         } catch (IOException ex) {
@@ -269,47 +344,30 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     @Override
-    public boolean hasChildren(final Mailbox<UUID> mailbox, final char c) throws MailboxException, MailboxNotFoundException {
+    public boolean hasChildren(final Mailbox<UUID> mailbox) throws MailboxException, MailboxNotFoundException {
         HTable mailboxes = null;
         ResultScanner scanner = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            
-            Scan scan = new Scan();
-            scan.addFamily(MAILBOX_CF);
-            scan.setCaching(mailboxes.getScannerCaching() * 2);
-            scan.setMaxVersions(1);
-            
-            FilterList filters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
-            
-            if (mailbox.getUser() != null) {
-                SingleColumnValueFilter userFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_USER, CompareOp.EQUAL, Bytes.toBytes(mailbox.getUser()));
-                filters.addFilter(userFilter);
-            }
-            SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF,
-                    MAILBOX_NAME,
-                    CompareOp.EQUAL,
-                    new BinaryPrefixComparator(Bytes.toBytes(mailbox.getName() + c)));
-            filters.addFilter(nameFilter);
-            SingleColumnValueFilter namespaceFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAMESPACE, CompareOp.EQUAL, Bytes.toBytes(mailbox.getNamespace()));
-            filters.addFilter(namespaceFilter);
-            
-            scan.setFilter(filters);
+
+            Scan scan = preparePatternScan(mailbox.getMailboxName().child(MailboxQuery.FREEWILDCARD_STRING), mailboxes);
             scanner = mailboxes.getScanner(scan);
             try {
                 if (scanner.next() != null) {
                     return true;
                 }
             } catch (IOException e) {
-                throw new MailboxNotFoundException("hasChildren() " + mailbox.getName());
+                throw new MailboxNotFoundException("hasChildren() " + mailbox.getMailboxName());
             }
             return false;
         } catch (IOException e) {
             throw new MailboxException("Search of mailbox " + mailbox + " failed", e);
         } finally {
-            scanner.close();
+            if (scanner != null) {
+                scanner.close();
+            }
             if (mailboxes != null) {
                 try {
                     mailboxes.close();
@@ -319,7 +377,7 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     public void deleteAllMemberships() {
         HTable messages = null;
         HTable mailboxes = null;
@@ -339,9 +397,10 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             long totalDeletes = deletes.size();
             messages.delete(deletes);
             if (deletes.size() > 0) {
-                //TODO: what shoul we do if not all messages are deleted?
+                // TODO: what shoul we do if not all messages are deleted?
                 System.out.println("Just " + deletes.size() + " out of " + totalDeletes + " messages have been deleted");
-                //throw new RuntimeException("Just " + deletes.size() + " out of " + totalDeletes + " messages have been deleted");
+                // throw new RuntimeException("Just " + deletes.size() +
+                // " out of " + totalDeletes + " messages have been deleted");
             }
             List<Put> puts = new ArrayList<Put>();
             scan = new Scan();
@@ -367,7 +426,7 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             }
         }
     }
-    
+
     public void deleteAllMailboxes() {
         HTable mailboxes = null;
         ResultScanner scanner = null;
@@ -382,14 +441,18 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             while ((result = scanner.next()) != null) {
                 deletes.add(new Delete(result.getRow()));
             }
-            long totalDeletes = deletes.size();
             mailboxes.delete(deletes);
         } catch (IOException ex) {
             throw new RuntimeException("IOException deleting mailboxes", ex);
         } finally {
             IOUtils.closeStream(scanner);
-            // TODO Temporary commented, was not compiling.
-//            IOUtils.closeStream(mailboxes);
+            if (mailboxes != null) {
+                try {
+                    mailboxes.close();
+                } catch (IOException ex) {
+                    throw new RuntimeException("Error closing table " + mailboxes, ex);
+                }
+            }
         }
     }
 }

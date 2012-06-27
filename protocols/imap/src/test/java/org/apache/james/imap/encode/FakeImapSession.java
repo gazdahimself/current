@@ -25,6 +25,7 @@ import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.process.ImapLineHandler;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,10 +39,17 @@ public class FakeImapSession implements ImapSession {
 
     private final Map<String, Object> attributesByKey;
 
+    private final MailboxNameCodec mailboxNameCodec;
+
     public FakeImapSession() {
-        this.attributesByKey = new ConcurrentHashMap<String, Object>();
+        this(MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC);
     }
 
+    public FakeImapSession(MailboxNameCodec mailboxNameCodec) {
+        this.attributesByKey = new ConcurrentHashMap<String, Object>();
+        this.mailboxNameCodec = mailboxNameCodec;
+    }
+    
     public void logout() {
         closeMailbox();
         state = ImapSessionState.LOGOUT;
@@ -127,11 +135,15 @@ public class FakeImapSession implements ImapSession {
     }
 
     public boolean supportMultipleNamespaces() {
-        return false;
+        return true;
     }
 
     public boolean isCompressionActive() {
         return false;
+    }
+
+    public MailboxNameCodec getMailboxNameCodec() {
+        return mailboxNameCodec;
     }
 
 }

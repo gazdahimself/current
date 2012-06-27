@@ -54,7 +54,6 @@ import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
-import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
@@ -230,7 +229,7 @@ abstract public class AbstractMailboxProcessor<M extends ImapRequest> extends Ab
             int msn = selected.msn(uid);
             if (msn == SelectedMailbox.NO_SUCH_MESSAGE) {
                 if (session.getLog().isDebugEnabled()) {
-                    session.getLog().debug("No message found with uid " + uid + " in the uid<->msn mapping for mailbox " + selected.getPath().getFullName(mailboxSession.getPathDelimiter()) +" , this may be because it was deleted by a concurrent session. So skip it..");
+                    session.getLog().debug("No message found with uid " + uid + " in the uid<->msn mapping for mailbox " + selected.getPath() +" , this may be because it was deleted by a concurrent session. So skip it..");
                 }  
                     
 
@@ -350,73 +349,11 @@ abstract public class AbstractMailboxProcessor<M extends ImapRequest> extends Ab
 
     protected abstract void doProcess(final M message, ImapSession session, String tag, ImapCommand command, Responder responder);
 
-    public MailboxPath buildFullPath(final ImapSession session, String mailboxName) {
-        String namespace = null;
-        String name = null;
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-
-        if (mailboxName == null || mailboxName.length() == 0) {
-            return new MailboxPath("", "", "");
-        }
-        if (mailboxName.charAt(0) == MailboxConstants.NAMESPACE_PREFIX_CHAR) {
-            int namespaceLength = mailboxName.indexOf(mailboxSession.getPathDelimiter());
-            if (namespaceLength > -1) {
-                namespace = mailboxName.substring(0, namespaceLength);
-                if (mailboxName.length() > namespaceLength)
-                    name = mailboxName.substring(++namespaceLength);
-            } else {
-                namespace = mailboxName;
-            }
-        } else {
-            namespace = MailboxConstants.USER_NAMESPACE;
-            name = mailboxName;
-        }
-        String user = null;
-        // we only use the user as part of the MailboxPath if its a private user
-        // namespace
-        if (namespace.equals(MailboxConstants.USER_NAMESPACE)) {
-            user = ImapSessionUtils.getUserName(session);
-        }
-        
-        // use uppercase for INBOX
-        //
-        // See IMAP-349
-        if (name.equalsIgnoreCase(MailboxConstants.INBOX)) {
-            name = MailboxConstants.INBOX;
-        }
-
-        return new MailboxPath(namespace, user, name);
-    }
-
-    /**
-     * Joins the elements of a mailboxPath together and returns them as a string
-     * 
-     * @param mailboxPath
-     * @return
-     */
-    private String joinMailboxPath(MailboxPath mailboxPath, char delimiter) {
-        StringBuffer sb = new StringBuffer("");
-        if (mailboxPath.getNamespace() != null && !mailboxPath.getNamespace().equals("")) {
-            sb.append(mailboxPath.getNamespace());
-        }
-        if (mailboxPath.getUser() != null && !mailboxPath.getUser().equals("")) {
-            if (sb.length() > 0)
-                sb.append(delimiter);
-            sb.append(mailboxPath.getUser());
-        }
-        if (mailboxPath.getName() != null && !mailboxPath.getName().equals("")) {
-            if (sb.length() > 0)
-                sb.append(delimiter);
-            sb.append(mailboxPath.getName());
-        }
-        return sb.toString();
-    }
-
     protected String mailboxName(final boolean relative, final MailboxPath path, final char delimiter) {
         if (relative) {
             return path.getName();
         } else {
-            return joinMailboxPath(path, delimiter);
+            return path.toString(delimiter);
         }
     }
 

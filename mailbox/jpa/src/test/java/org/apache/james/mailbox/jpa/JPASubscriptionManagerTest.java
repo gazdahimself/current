@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import org.apache.james.mailbox.AbstractSubscriptionManagerTest;
 import org.apache.james.mailbox.SubscriptionManager;
+import org.apache.james.mailbox.acl.MailboxACLCodec;
 import org.apache.james.mailbox.jpa.mail.JPAModSeqProvider;
 import org.apache.james.mailbox.jpa.mail.JPAUidProvider;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
@@ -30,6 +31,7 @@ import org.apache.james.mailbox.jpa.mail.model.JPAUserFlag;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.AbstractJPAMessage;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMessage;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.openjpa.persistence.OpenJPAEntityManagerFactory;
 import org.apache.openjpa.persistence.OpenJPAPersistence;
@@ -64,7 +66,7 @@ public class JPASubscriptionManagerTest extends AbstractSubscriptionManagerTest{
     public SubscriptionManager createSubscriptionManager() {
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
 
-        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory));
+        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory), MailboxNameCodec.SAFE_STORE_NAME_CODEC, MailboxACLCodec.DEFAULT);
 
         JPASubscriptionManager sm = new JPASubscriptionManager(mf);
         

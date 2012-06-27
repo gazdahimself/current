@@ -25,7 +25,7 @@ import java.util.List;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
 
 /**
  * Describes the current state of a mailbox.

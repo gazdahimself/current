@@ -30,8 +30,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
-import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 public abstract class AbstractAuthProcessor<M extends ImapRequest> extends AbstractMailboxProcessor<M>{
 
@@ -56,7 +55,8 @@ public abstract class AbstractAuthProcessor<M extends ImapRequest> extends Abstr
                     final MailboxSession mailboxSession = mailboxManager.login(userid, passwd, session.getLog());
                     session.authenticated();
                     session.setAttribute(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY, mailboxSession);
-                    final MailboxPath inboxPath = buildFullPath(session, MailboxConstants.INBOX);
+                    MailboxName inboxPath = mailboxSession.getMailboxNameResolver().getInbox(mailboxSession.getOwner());
+
                     if (mailboxManager.mailboxExists(inboxPath, mailboxSession)) {
                         if (session.getLog().isDebugEnabled()) {
                             session.getLog().debug("INBOX exists. No need to create it.");

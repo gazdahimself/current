@@ -18,59 +18,57 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model.impl;
 
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.SimpleMailboxACL;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 public class SimpleMailbox<Id> implements Mailbox<Id> {
 
     private Id id = null;
-    private String namespace;
     private String user;
-    private String name;
+    private MailboxName mailboxName;
     private long uidValidity;
     private MailboxACL acl = SimpleMailboxACL.EMPTY;
+    private boolean ownerGroup;
 
-    public SimpleMailbox(MailboxPath path, long uidValidity) {
-        this.namespace = path.getNamespace();
-        this.user = path.getUser();
-        this.name = path.getName();
+    public SimpleMailbox(MailboxName mailboxName, String user, boolean ownerGroup, long uidValidity) {
+        this.mailboxName = mailboxName;
+        this.user = user;
         this.uidValidity = uidValidity;
+        this.ownerGroup = ownerGroup;
     }
     
     public SimpleMailbox(Mailbox<Id> mailbox) {
         this.id = mailbox.getMailboxId();
-        this.namespace = mailbox.getNamespace();
+        this.mailboxName = mailbox.getMailboxName();
         this.user = mailbox.getUser();
-        this.name = mailbox.getName();
+        this.ownerGroup = mailbox.isOwnerGroup();
         this.uidValidity = mailbox.getUidValidity();
     }
 
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getMailboxId()
      */
+    @Override
     public Id getMailboxId() {
         return id;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getNamespace()
-     */
-    public String getNamespace() {
-        return namespace;
+    @Override
+    public MailboxName getMailboxName() {
+        return mailboxName;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setNamespace(java.lang.String)
-     */
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
+    @Override
+    public void setMailboxName(MailboxName mailboxName) {
+        this.mailboxName = mailboxName;
     }
 
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getUser()
      */
+    @Override
     public String getUser() {
         return user;
     }
@@ -78,29 +76,15 @@ public class SimpleMailbox<Id> implements Mailbox<Id> {
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#setUser(java.lang.String)
      */
+    @Override
     public void setUser(String user) {
         this.user = user;
     }
 
     /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getName()
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Mailbox#setName(java.lang.String
-     * )
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getUidValidity()
      */
+    @Override
     public long getUidValidity() {
         return uidValidity;
     }
@@ -109,6 +93,7 @@ public class SimpleMailbox<Id> implements Mailbox<Id> {
      * @see java.lang.Object#equals(java.lang.Object)
      */
     @SuppressWarnings("unchecked")
+    @Override
     public boolean equals(Object obj) {
         if (obj == this) {
             return true;
@@ -132,9 +117,8 @@ public class SimpleMailbox<Id> implements Mailbox<Id> {
     public int hashCode() {
         final int PRIME = 31;
         int result = 1;
-        result = PRIME * result + namespace.hashCode();
+        result = PRIME * result + mailboxName.hashCode();
         result = PRIME * result + user.hashCode();
-        result = PRIME * result + name.hashCode();
         return result;
     }
 
@@ -143,7 +127,7 @@ public class SimpleMailbox<Id> implements Mailbox<Id> {
      */
     @Override
     public String toString() {
-        return namespace + ":" + user + ":" + name;
+        return mailboxName + ":" + user;
     }
 
 
@@ -167,4 +151,14 @@ public class SimpleMailbox<Id> implements Mailbox<Id> {
         this.acl = acl;
     }
 
+    @Override
+    public boolean isOwnerGroup() {
+        return ownerGroup;
+    }
+
+    @Override
+    public void setOwnerGroup(boolean ownerGroup) {
+        this.ownerGroup = ownerGroup;
+    }
+    
 }

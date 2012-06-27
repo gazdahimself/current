@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.transaction.NonTransactionalMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.model.Subscription;
@@ -40,6 +43,7 @@ public class InMemorySubscriptionMapper extends NonTransactionalMapper implement
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#delete(org.apache.james.mailbox.store.user.model.Subscription)
      */
+    @Override
     public synchronized void delete(Subscription subscription) {
         final String user = subscription.getUser();
         final List<Subscription> subscriptions = subscriptionsByUser.get(user);
@@ -51,49 +55,45 @@ public class InMemorySubscriptionMapper extends NonTransactionalMapper implement
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findMailboxSubscriptionForUser(java.lang.String, java.lang.String)
      */
-    public Subscription findMailboxSubscriptionForUser(String user, String mailbox) {
-        final List<Subscription> subscriptions = subscriptionsByUser.get(user);
-        Subscription result = null;
+    @Override
+    public Subscription findMailboxSubscriptionForUser(MailboxOwner owner, MailboxName mailbox) {
+        final List<Subscription> subscriptions = subscriptionsByUser.get(owner.getName());
         if (subscriptions != null) {
-            for(Subscription subscription:subscriptions) {
+            for(Subscription subscription : subscriptions) {
                 if (subscription.getMailbox().equals(mailbox)) {
-                    result = subscription;
-                    break;
+                    return subscription;
                 }
             }
         }
-        return result;
+        return null;
     }
 
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser(java.lang.String)
      */
-    @SuppressWarnings("unchecked")
-    public List<Subscription> findSubscriptionsForUser(String user) {
-        final List<Subscription> subcriptions = subscriptionsByUser.get(user);
-        final List<Subscription> results;
+    @Override
+    public List<Subscription> findSubscriptionsForUser(MailboxOwner owner) {
+        final List<Subscription> subcriptions = subscriptionsByUser.get(owner.getName());
         if (subcriptions == null) {
-            results = Collections.EMPTY_LIST;
+            return Collections.emptyList();
         } else {
-            // Make a copy to prevent concurrent modifications
-            results = new ArrayList<Subscription>(subcriptions);
+            /* prevent modifications */
+            return Collections.unmodifiableList(subcriptions);
         }
-        return results;
     }
 
     /**
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#save(org.apache.james.mailbox.store.user.model.Subscription)
      */
+    @Override
     public synchronized void save(Subscription subscription) {
         final String user = subscription.getUser();
-        final List<Subscription> subscriptions = subscriptionsByUser.get(user);
+        List<Subscription> subscriptions = subscriptionsByUser.get(user);
         if (subscriptions == null) {
-            final List<Subscription> newSubscriptions  = new ArrayList<Subscription>();
-            newSubscriptions.add(subscription);
-            subscriptionsByUser.put(user, newSubscriptions);
-        } else {
-            subscriptions.add(subscription);
+            subscriptions  = new ArrayList<Subscription>(StoreMailboxManager.estimateMailboxCountPerUser());
+            subscriptionsByUser.put(user, subscriptions);
         }
+        subscriptions.add(subscription);
     }
     
     public void deleteAll() {
@@ -103,6 +103,7 @@ public class InMemorySubscriptionMapper extends NonTransactionalMapper implement
     /**
      * Do nothing
      */
+    @Override
     public void endRequest() {
         // nothing todo
         

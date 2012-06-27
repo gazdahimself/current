@@ -15,6 +15,25 @@
  */
 package org.apache.james.mailbox.hbase.mail;
 
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOXES;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOXES_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_META_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_DATA_BODY_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_DATA_HEADERS_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTIONS;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTIONS_TABLE;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
+import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxFromResult;
+import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxRowKey;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,24 +41,29 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
-import static org.apache.james.mailbox.hbase.HBaseNames.*;
-import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxFromResult;
-import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxRowKey;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
 import org.apache.james.mailbox.hbase.io.ChunkOutputStream;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
-import static org.junit.Assert.*;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,135 +74,182 @@ import org.slf4j.LoggerFactory;
  */
 public class HBaseMailboxMapperTest {
 
+    /**
+     * 
+     */
+    private static final String SUB = "sub";
     private static final Logger LOG = LoggerFactory.getLogger(HBaseMailboxMapperTest.class);
-    public static final HBaseClusterSingleton CLUSTER = HBaseClusterSingleton.build();
+    private static HBaseClusterSingleton cluster;
     private static Configuration conf;
     private static HBaseMailboxMapper mapper;
     private static List<HBaseMailbox> mailboxList;
-    private static List<MailboxPath> pathsList;
-    private static final int NAMESPACES = 5;
-    private static final int USERS = 5;
-    private static final int MAILBOX_NO = 5;
-    private static final char SEPARATOR = '%';
+    private static List<MailboxName> mailboxNames;
+    private static final int USER_COUNT = 2;
+    private static final int DOMAIN_COUNT = 3;
+    private static final int MAILBOX_COUNT = 3;
+    private static final MailboxNameCodec MAILBOX_NAME_CODEC = MailboxNameCodec.SAFE_STORE_NAME_CODEC;
+    private static final MailboxNameResolver MAILBOX_NAME_RESOLVER = DefaultMailboxNameResolver.INSTANCE;
+    private static final String USER_PREFIX = "user";
+    private static final String GROUP_PREFIX = "group";
+    private static final MailboxName CATCH_ALL_PATTERN = new MailboxNameBuilder(1).add(MailboxQuery.FREEWILDCARD_STRING).qualified(true);
+    private static final MailboxName USERS_ROOT_NAME = new MailboxNameBuilder(1).add("#users").qualified(true);
+    private static final MailboxName USER0_INBOX = MAILBOX_NAME_RESOLVER.getInbox(USER_PREFIX + 0);
+    private static final MailboxName USER0_INBOX_SUB0_SUB1_SUB2 = MAILBOX_NAME_RESOLVER.getInbox(USER_PREFIX + 0).child(SUB + 0).child(SUB + 1).child(SUB + 2);
 
-    @Before
-    public void setUp() throws Exception {
+
+    @BeforeClass
+    public static void setUp() throws Exception {
+        cluster = HBaseClusterSingleton.build();
         ensureTables();
-        // start the test cluster
         clearTables();
-        conf = CLUSTER.getConf();
+        conf = cluster.getConf();
         fillMailboxList();
-        mapper = new HBaseMailboxMapper(conf);
-        for (HBaseMailbox mailbox : mailboxList) {
-            mapper.save(mailbox);
-        }
+        mapper = new HBaseMailboxMapper(conf, MAILBOX_NAME_RESOLVER, MAILBOX_NAME_CODEC);
     }
 
-    private void ensureTables() throws IOException {
-        CLUSTER.ensureTable(MAILBOXES_TABLE, new byte[][]{MAILBOX_CF});
-        CLUSTER.ensureTable(MESSAGES_TABLE,
+    private static void ensureTables() throws IOException {
+        cluster.ensureTable(MAILBOXES_TABLE, new byte[][]{MAILBOX_CF});
+        cluster.ensureTable(MESSAGES_TABLE,
                 new byte[][]{MESSAGES_META_CF, MESSAGE_DATA_HEADERS_CF, MESSAGE_DATA_BODY_CF});
-        CLUSTER.ensureTable(SUBSCRIPTIONS_TABLE, new byte[][]{SUBSCRIPTION_CF});
+        cluster.ensureTable(SUBSCRIPTIONS_TABLE, new byte[][]{SUBSCRIPTION_CF});
     }
 
-    private void clearTables() {
-        CLUSTER.clearTable(MAILBOXES);
-        CLUSTER.clearTable(MESSAGES);
-        CLUSTER.clearTable(SUBSCRIPTIONS);
-    }
-
-    /**
-     * Test an ordered scenario with list, delete... methods.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testMailboxMapperScenario() throws Exception {
-        testFindMailboxByPath();
-        testFindMailboxWithPathLike();
-        testList();
-        testSave();
-        testDelete();
-        testHasChildren();
-//        testDeleteAllMemberships(); // Ignore this test
-        testDeleteAllMailboxes();
-        testChunkStream();
-    }
-
-    /**
-     * Test of findMailboxByPath method, of class HBaseMailboxMapper.
-     */
-    private void testFindMailboxByPath() throws Exception {
-        LOG.info("findMailboxByPath");
-        HBaseMailbox mailbox;
-        for (MailboxPath path : pathsList) {
-            LOG.info("Searching for " + path);
-            mailbox = (HBaseMailbox) mapper.findMailboxByPath(path);
-            assertEquals(path, new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName()));
-        }
-    }
-
-    /**
-     * Test of findMailboxWithPathLike method, of class HBaseMailboxMapper.
-     */
-    private void testFindMailboxWithPathLike() throws Exception {
-        LOG.info("findMailboxWithPathLike");
-        MailboxPath path = pathsList.get(pathsList.size() / 2);
-
-        List<Mailbox<UUID>> result = mapper.findMailboxWithPathLike(path);
-        assertEquals(1, result.size());
-
-        int start = 3;
-        int end = 7;
-        MailboxPath newPath;
-
-        for (int i = start; i < end; i++) {
-            newPath = new MailboxPath(path);
-            newPath.setName(i + newPath.getName() + " " + i);
-            // test for paths with null user
-            if (i % 2 == 0) {
-                newPath.setUser(null);
-            }
-            addMailbox(new HBaseMailbox(newPath, 1234));
-        }
-        result = mapper.findMailboxWithPathLike(path);
-        assertEquals(end - start + 1, result.size());
-    }
-
-    /**
-     * Test of list method, of class HBaseMailboxMapper.
-     */
-    private void testList() throws Exception {
-        LOG.info("list");
-        List<Mailbox<UUID>> result = mapper.list();
-        assertEquals(mailboxList.size(), result.size());
-
+    private static void clearTables() {
+        cluster.clearTable(MAILBOXES);
+        cluster.clearTable(MESSAGES);
+        cluster.clearTable(SUBSCRIPTIONS);
     }
 
     /**
      * Test of save method, of class HBaseMailboxMapper.
      */
-    private void testSave() throws Exception {
-        LOG.info("save and mailboxFromResult");
+    @Test
+    public void testSave() throws Exception {
+        
         final HTable mailboxes = new HTable(conf, MAILBOXES_TABLE);
+        
+        for (HBaseMailbox mlbx : mailboxList) {
+            mapper.save(mlbx);
+            
+    
+            final Get get = new Get(mailboxRowKey(mlbx.getMailboxId()));
+            // get all columns for the DATA column family
+            get.addFamily(MAILBOX_CF);
+    
+            final Result result = mailboxes.get(get);
+            final HBaseMailbox newValue = (HBaseMailbox) mailboxFromResult(result, MAILBOX_NAME_CODEC);
+            assertEquals(mlbx, newValue);
+            assertEquals(mlbx.getUser(), newValue.getUser());
+            assertEquals(mlbx.getMailboxName(), newValue.getMailboxName());
+            assertEquals(mlbx.getMailboxId(), newValue.getMailboxId());
+            assertEquals(mlbx.getLastUid(), newValue.getLastUid());
+            assertEquals(mlbx.getUidValidity(), newValue.getUidValidity());
+            assertEquals(mlbx.getHighestModSeq(), newValue.getHighestModSeq());
+            assertArrayEquals(mailboxRowKey(mlbx.getMailboxId()), mailboxRowKey(newValue.getMailboxId()));
+        }
+    
+        IOUtils.closeStream(mailboxes);
+        
+    }
 
-        final HBaseMailbox mlbx = mailboxList.get(mailboxList.size() / 2);
+    /**
+     * Test of findMailboxByPath method, of class HBaseMailboxMapper.
+     */
+    @Test
+    public void testFindMailboxByPath() throws Exception {
+        LOG.info("findMailboxByPath");
+        HBaseMailbox mailbox;
+        for (MailboxName path : mailboxNames) {
+            LOG.info("Searching for " + path);
+            mailbox = (HBaseMailbox) mapper.findMailboxByPath(path);
+            assertEquals(path, mailbox.getMailboxName());
+        }
+    }
 
-        final Get get = new Get(mailboxRowKey(mlbx.getMailboxId()));
-        // get all columns for the DATA column family
-        get.addFamily(MAILBOX_CF);
 
-        final Result result = mailboxes.get(get);
-        final HBaseMailbox newValue = (HBaseMailbox) mailboxFromResult(result);
-        assertEquals(mlbx, newValue);
-        assertEquals(mlbx.getUser(), newValue.getUser());
-        assertEquals(mlbx.getName(), newValue.getName());
-        assertEquals(mlbx.getNamespace(), newValue.getNamespace());
-        assertEquals(mlbx.getMailboxId(), newValue.getMailboxId());
-        assertEquals(mlbx.getLastUid(), newValue.getLastUid());
-        assertEquals(mlbx.getUidValidity(), newValue.getUidValidity());
-        assertEquals(mlbx.getHighestModSeq(), newValue.getHighestModSeq());
-        assertArrayEquals(mailboxRowKey(mlbx.getMailboxId()), mailboxRowKey(newValue.getMailboxId()));
+    /**
+     * Test of findMailboxWithPathLike method, of class HBaseMailboxMapper.
+     */
+    @Test
+    public void testFindMailboxWithPathLike() throws Exception {
+        LOG.info("findMailboxWithPathLike");
+        MailboxName path;
+        List<Mailbox<UUID>> result;
+        
+        path = MAILBOX_NAME_RESOLVER.getInbox(USER_PREFIX + 0).appendToLast(MailboxQuery.FREEWILDCARD_STRING);
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(MAILBOX_COUNT + 1, result.size());
+        
+        path = USER0_INBOX.child(MailboxQuery.FREEWILDCARD_STRING);
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(MAILBOX_COUNT, result.size());
+    
+    
+        path = MAILBOX_NAME_RESOLVER.getInbox(USER_PREFIX + 0).child(MailboxQuery.LOCALWILDCARD_STRING);
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(1, result.size());
+        
+        path = CATCH_ALL_PATTERN;
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(mailboxNames.size(), result.size());
+    
+        
+        path = USERS_ROOT_NAME.child(MailboxQuery.FREEWILDCARD_STRING);
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(USER_COUNT * (MAILBOX_COUNT + 1), result.size());
+    
+        path = USERS_ROOT_NAME.appendToLast(MailboxQuery.FREEWILDCARD_STRING);
+        result = mapper.findMailboxWithPathLike(path);
+        assertEquals(USER_COUNT * (MAILBOX_COUNT + 1), result.size());
+    
+    }
+
+    /**
+     * Test of hasChildren method, of class HBaseMailboxMapper.
+     */
+    @Test
+    public void testHasChildren() throws Exception {
+        MailboxName mailboxName;
+        MailboxOwner owner;
+        HBaseMailbox mailbox;
+
+        mailboxName = USERS_ROOT_NAME;
+        mailbox = new HBaseMailbox(mailboxName, null, false, 12455);
+        assertTrue(mapper.hasChildren(mailbox));
+
+        mailboxName = USER0_INBOX;
+        owner = MAILBOX_NAME_RESOLVER.getOwner(mailboxName);
+        mailbox = new HBaseMailbox(mailboxName, owner.getName(), owner.isGroup(), 12455);
+        assertTrue(mapper.hasChildren(mailbox));
+
+        mailboxName = USER0_INBOX_SUB0_SUB1_SUB2;
+        owner = MAILBOX_NAME_RESOLVER.getOwner(mailboxName);
+        mailbox = new HBaseMailbox(mailboxName, owner.getName(), owner.isGroup(), 12455);
+        assertFalse(mapper.hasChildren(mailbox));
+
+    }
+
+    /**
+     * Test of list method, of class HBaseMailboxMapper.
+     */
+    @Test
+    public void testList() throws Exception {
+        LOG.info("list");
+        List<Mailbox<UUID>> result = mapper.list();
+        assertEquals(mailboxList.size(), result.size());
+    }
+    
+    /**
+     * Test an ordered scenario with list, delete... methods.
+     *
+     * @throws Exception
+     */
+    public void testMailboxMapperScenario() throws Exception {
+        testSave();
+        testDelete();
+//        testDeleteAllMemberships(); // Ignore this test
+        testDeleteAllMailboxes();
+        testChunkStream();
     }
 
     /**
@@ -196,8 +267,8 @@ public class HBaseMailboxMapperTest {
             HBaseMailbox mailbox = iterator.next();
             mapper.delete(mailbox);
             iterator.remove();
-            MailboxPath path = new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName());
-            pathsList.remove(path);
+            MailboxName path = mailbox.getMailboxName();
+            mailboxNames.remove(path);
             LOG.info("Removing mailbox: {}", path);
             try {
                 mapper.findMailboxByPath(path);
@@ -210,28 +281,6 @@ public class HBaseMailboxMapperTest {
         assertEquals(mailboxList.size(), mapper.list().size());
     }
 
-    /**
-     * Test of hasChildren method, of class HBaseMailboxMapper.
-     */
-    private void testHasChildren() throws Exception {
-        LOG.info("hasChildren");
-        String oldName;
-        for (MailboxPath path : pathsList) {
-            final HBaseMailbox mailbox = new HBaseMailbox(path, 12455);
-            oldName = mailbox.getName();
-            if (path.getUser().equals("user3")) {
-                mailbox.setName("test");
-            }
-            boolean result = mapper.hasChildren(mailbox, SEPARATOR);
-            mailbox.setName(oldName);
-            if (path.getUser().equals("user3")) {
-                assertTrue(result);
-            } else {
-                assertFalse(result);
-            }
-
-        }
-    }
 
     /**
      * Test of deleteAllMemberships method, of class HBaseMailboxMapper.
@@ -286,32 +335,47 @@ public class HBaseMailboxMapperTest {
 
     private static void fillMailboxList() {
         mailboxList = new ArrayList<HBaseMailbox>();
-        pathsList = new ArrayList<MailboxPath>();
-        MailboxPath path;
-        String name;
-        for (int i = 0; i < NAMESPACES; i++) {
-            for (int j = 0; j < USERS; j++) {
-                for (int k = 0; k < MAILBOX_NO; k++) {
-                    if (j == 3) {
-                        name = "test" + SEPARATOR + "subbox" + k;
-                    } else {
-                        name = "mailbox" + k;
-                    }
-                    path = new MailboxPath("namespace" + i, "user" + j, name);
-                    pathsList.add(path);
-                    mailboxList.add(new HBaseMailbox(path, 13));
+        mailboxNames = new ArrayList<MailboxName>();
+        
+        for (int j = 0; j < USER_COUNT; j++) {
+            for (boolean isGroup : new boolean[] {false, true}) {
+                String prefix = isGroup ? GROUP_PREFIX : USER_PREFIX;
+                String user = prefix + j;
+                MailboxOwner owner = MAILBOX_NAME_RESOLVER.getOwner(user, isGroup);
+                MailboxName mailboxName = MAILBOX_NAME_RESOLVER.getInbox(owner);
+                mailboxNames.add(mailboxName);
+                mailboxList.add(new HBaseMailbox(mailboxName, user, isGroup,  mailboxList.size()));
+                
+                for (int k = 0; k < MAILBOX_COUNT; k++) {
+                    mailboxName = mailboxName.child(SUB+ k);
+                    mailboxNames.add(mailboxName);
+                    mailboxList.add(new HBaseMailbox(mailboxName, user, isGroup,  mailboxList.size()));
                 }
             }
         }
+        
+        for (int i = 0; i < DOMAIN_COUNT; i++) {
+            String domain = "domain"+i;
+            for (int j = 0; j < USER_COUNT; j++) {
+                for (boolean isGroup : new boolean[] {false, true}) {
+                    String prefix = isGroup ? GROUP_PREFIX : USER_PREFIX;
+                    String user = prefix + j + MailboxConstants.AT + domain;
+                    MailboxOwner owner = MAILBOX_NAME_RESOLVER.getOwner(user, isGroup);
+                    MailboxName mailboxName = MAILBOX_NAME_RESOLVER.getInbox(owner);
+                    mailboxNames.add(mailboxName);
+                    mailboxList.add(new HBaseMailbox(mailboxName, user, isGroup,  mailboxList.size()));
+                    
+                    for (int k = 0; k < MAILBOX_COUNT; k++) {
+                        mailboxName = mailboxName.child(SUB+ k);
+                        mailboxNames.add(mailboxName);
+                        mailboxList.add(new HBaseMailbox(mailboxName, user, isGroup,  mailboxList.size()));
+                    }
+                }
+            }
+        }
+        
         LOG.info("Created test case with {} mailboxes and {} paths",
-                mailboxList.size(), pathsList.size());
+                mailboxList.size(), mailboxNames.size());
     }
 
-    private void addMailbox(HBaseMailbox mailbox) throws MailboxException {
-        mailboxList.add(mailbox);
-        pathsList.add(new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName()));
-        mapper = new HBaseMailboxMapper(conf);
-        mapper.save(mailbox);
-        LOG.info("Added new mailbox: {} paths: {}", mailboxList.size(), pathsList.size());
-    }
 }

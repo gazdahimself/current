@@ -31,6 +31,7 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
 import org.apache.james.imap.encode.ImapEncoder;
+import org.apache.james.mailbox.name.MailboxNameResolver;
 import org.apache.james.protocols.api.Encryption;
 import org.apache.james.protocols.netty.ChannelGroupHandler;
 import org.apache.james.protocols.netty.ConnectionLimitUpstreamHandler;
@@ -61,6 +62,8 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private ImapEncoder encoder;
 
     private ImapDecoder decoder;
+    
+    private MailboxNameResolver mailboxNameResolver;
 
     private boolean compress;
 
@@ -100,6 +103,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     @Resource(name = "imapProcessor")
     public void setImapProcessor(ImapProcessor processor) {
         this.processor = processor;
+    }
+
+    @Resource(name = "imapMailboxNameResolver")
+    public void setImapMailboxNameResolver(MailboxNameResolver mailboxNameResolver) {
+        this.mailboxNameResolver = mailboxNameResolver;
     }
 
     @Override
@@ -194,9 +202,9 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         ImapChannelUpstreamHandler coreHandler;
         Encryption secure = getEncryption();
         if (secure!= null && secure.isStartTLS()) {
-           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed, secure.getContext(), getEnabledCipherSuites());
+           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, mailboxNameResolver, getLogger(), compress, plainAuthDisallowed, secure.getContext(), getEnabledCipherSuites());
         } else {
-           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed);
+           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, mailboxNameResolver, getLogger(), compress, plainAuthDisallowed);
         }
         return coreHandler;
     }

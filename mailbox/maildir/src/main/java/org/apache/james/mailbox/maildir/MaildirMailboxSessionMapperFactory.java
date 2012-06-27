@@ -41,8 +41,7 @@ public class MaildirMailboxSessionMapperFactory extends
     
     
     @Override
-    protected MailboxMapper<Integer> createMailboxMapper(MailboxSession session)
-            throws MailboxException {
+    protected MailboxMapper<Integer> createMailboxMapper(MailboxSession session) throws MailboxException {
         return new MaildirMailboxMapper(store, session);
     }
 
@@ -55,7 +54,7 @@ public class MaildirMailboxSessionMapperFactory extends
     @Override
     protected SubscriptionMapper createSubscriptionMapper(MailboxSession session)
             throws SubscriptionException {
-        return new MaildirSubscriptionMapper(store);
+        return new MaildirSubscriptionMapper(store, session);
     }
 
 }

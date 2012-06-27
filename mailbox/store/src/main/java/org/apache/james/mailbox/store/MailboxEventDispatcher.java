@@ -23,13 +23,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxListener.MailboxAdded;
 import org.apache.james.mailbox.MailboxListener.MailboxDeletion;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 /**
@@ -95,7 +96,7 @@ public class MailboxEventDispatcher<Id> {
      * @param from
      * @param to
      */
-    public void mailboxRenamed(MailboxSession session, MailboxPath from, Mailbox<Id> to) {
+    public void mailboxRenamed(MailboxSession session, MailboxName from, Mailbox<Id> to) {
         listener.event(new MailboxRenamedEventImpl(session, from, to));
     }
 
@@ -109,7 +110,7 @@ public class MailboxEventDispatcher<Id> {
         private final Mailbox<Id> mailbox;
 
         public AddedImpl(final MailboxSession session, final Mailbox<Id> mailbox, final SortedMap<Long, MessageMetaData> added) {
-            super(session, new StoreMailboxPath<Id>(mailbox));
+            super(session, mailbox.getMailboxName());
             this.added = added;
             this.mailbox = mailbox;
         }
@@ -142,7 +143,7 @@ public class MailboxEventDispatcher<Id> {
         private final Mailbox<Id> mailbox;
 
         public ExpungedImpl(MailboxSession session, final Mailbox<Id> mailbox, final  Map<Long, MessageMetaData> uids) {
-            super(session,  new StoreMailboxPath<Id>(mailbox));
+            super(session,  mailbox.getMailboxName());
             this.uids = uids;
             this.mailbox = mailbox;
         }
@@ -178,7 +179,7 @@ public class MailboxEventDispatcher<Id> {
         private final List<UpdatedFlags> uFlags;
 
         public FlagsUpdatedImpl(MailboxSession session, final Mailbox<Id> mailbox, final List<Long> uids, final List<UpdatedFlags> uFlags) {
-            super(session, new StoreMailboxPath<Id>(mailbox));
+            super(session, mailbox.getMailboxName());
             this.uids = uids;
             this.uFlags = uFlags;
             this.mailbox = mailbox;
@@ -212,7 +213,7 @@ public class MailboxEventDispatcher<Id> {
         private final Mailbox<Id> mailbox;
 
         public MailboxDeletionImpl(MailboxSession session, Mailbox<Id> mailbox) {
-            super(session, new StoreMailboxPath<Id>(mailbox));
+            super(session, mailbox.getMailboxName());
             this.mailbox = mailbox;
         }
         
@@ -232,7 +233,7 @@ public class MailboxEventDispatcher<Id> {
         private final Mailbox<Id> mailbox;
 
         public MailboxAddedImpl(MailboxSession session, Mailbox<Id> mailbox) {
-            super(session,  new StoreMailboxPath<Id>(mailbox));
+            super(session,  mailbox.getMailboxName());
             this.mailbox = mailbox;
         }
         
@@ -272,12 +273,12 @@ public class MailboxEventDispatcher<Id> {
          */
         private static final long serialVersionUID = 1L;
         
-        private final MailboxPath newPath;
+        private final MailboxName newPath;
         private final Mailbox<Id> newMailbox;
 
-        public MailboxRenamedEventImpl(final MailboxSession session, final MailboxPath oldPath, final Mailbox<Id> newMailbox) {
+        public MailboxRenamedEventImpl(final MailboxSession session, final MailboxName oldPath, final Mailbox<Id> newMailbox) {
             super(session, oldPath);
-            this.newPath = new StoreMailboxPath<Id>(newMailbox);
+            this.newPath = newMailbox.getMailboxName();
             this.newMailbox = newMailbox;
         }
 
@@ -285,7 +286,8 @@ public class MailboxEventDispatcher<Id> {
          * @see
          * org.apache.james.mailbox.MailboxListener.MailboxRenamed#getNewPath()
          */
-        public MailboxPath getNewPath() {
+        @Override
+        public MailboxName getNewPath() {
             return newPath;
         }
         

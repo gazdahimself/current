@@ -24,16 +24,18 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.james.mailbox.name.MailboxName;
+
 class User {
     private final String userName;
 
     private CharSequence password;
 
-    private final Set<String> subscriptions;
+    private final Set<MailboxName> subscriptions;
 
     public User(final String userName) {
         this.userName = userName;
-        this.subscriptions = new HashSet<String>();
+        this.subscriptions = new HashSet<MailboxName>();
     }
 
     public String getUserName() {
@@ -44,15 +46,15 @@ class User {
         this.password = password;
     }
 
-    public Collection<String> getSubscriptions() {
+    public Collection<MailboxName> getSubscriptions() {
         return Collections.unmodifiableSet(subscriptions);
     }
 
-    public void addSubscription(String subscription) {
+    public void addSubscription(MailboxName subscription) {
         this.subscriptions.add(subscription);
     }
 
-    public void removeSubscription(String mailbox) {
+    public void removeSubscription(MailboxName mailbox) {
         this.subscriptions.remove(mailbox);
     }
 

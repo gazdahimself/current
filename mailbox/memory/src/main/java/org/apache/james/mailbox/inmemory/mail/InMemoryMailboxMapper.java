@@ -26,7 +26,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -44,6 +46,7 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#delete(org.apache.james.mailbox.store.mail.model.Mailbox)
      */
+    @Override
     public void delete(Mailbox<Long> mailbox) throws MailboxException {
         mailboxesById.remove(mailbox.getMailboxId());
     }
@@ -55,30 +58,25 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#findMailboxByPath(org.apache.james.mailbox.model.MailboxPath)
      */
-    public synchronized Mailbox<Long> findMailboxByPath(MailboxPath path) throws MailboxException, MailboxNotFoundException {
-        Mailbox<Long> result = null;
-        for (final Mailbox<Long> mailbox:mailboxesById.values()) {
-            MailboxPath mp = new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), mailbox.getName());
-            if (mp.equals(path)) {
-                result = mailbox;
-                break;
+    @Override
+    public synchronized Mailbox<Long> findMailboxByPath(MailboxName path) throws MailboxException, MailboxNotFoundException {
+        for (final Mailbox<Long> mailbox : mailboxesById.values()) {
+            if (path.equals(mailbox.getMailboxName())) {
+                return mailbox;
             }
         }
-        if (result == null) {
-            throw new MailboxNotFoundException(path);
-        } else {
-            return result;
-        }
+        throw new MailboxNotFoundException(path);
     }
 
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#findMailboxWithPathLike(org.apache.james.mailbox.model.MailboxPath)
      */
-    public List<Mailbox<Long>> findMailboxWithPathLike(MailboxPath path) throws MailboxException {
-        final String regex = path.getName().replace("%", ".*");
-        List<Mailbox<Long>> results = new ArrayList<Mailbox<Long>>();
-        for (final Mailbox<Long> mailbox:mailboxesById.values()) {
-            if (mailbox.getName().matches(regex)) {
+    @Override
+    public List<Mailbox<Long>> findMailboxWithPathLike(MailboxName path) throws MailboxException {
+        MailboxQuery mailboxQuery = new MailboxQuery(path);
+        List<Mailbox<Long>> results = new ArrayList<Mailbox<Long>>(StoreMailboxManager.estimateMailboxCountPerUser());
+        for (final Mailbox<Long> mailbox : mailboxesById.values()) {
+            if (mailboxQuery.isExpressionMatch(mailbox.getMailboxName())) {
                 results.add(mailbox);
             }
         }
@@ -88,6 +86,7 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#save(org.apache.james.mailbox.store.mail.model.Mailbox)
      */
+    @Override
     public void save(Mailbox<Long> mailbox) throws MailboxException {
         Long id = mailbox.getMailboxId();
         if (id == null) {
@@ -100,6 +99,7 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * Do nothing
      */
+    @Override
     public void endRequest() {
         // Do nothing
     }
@@ -107,11 +107,11 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(org.apache.james.mailbox.store.mail.model.Mailbox, char)
      */
-    public boolean hasChildren(Mailbox<Long> mailbox, char delimiter) throws MailboxException,
-            MailboxNotFoundException {
-        String mailboxName = mailbox.getName() + delimiter;
-        for (final Mailbox<Long> box:mailboxesById.values()) {
-            if (box.getName().startsWith(mailboxName)) {
+    @Override
+    public boolean hasChildren(Mailbox<Long> mailbox) throws MailboxException, MailboxNotFoundException {
+        MailboxQuery mailboxQuery = new MailboxQuery(mailbox.getMailboxName().child(MailboxQuery.FREEWILDCARD_STRING));
+        for (final Mailbox<Long> mbox : mailboxesById.values()) {
+            if (mailboxQuery.isExpressionMatch(mbox.getMailboxName())) {
                 return true;
             }
         }
@@ -121,10 +121,12 @@ public class InMemoryMailboxMapper implements MailboxMapper<Long> {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#list()
      */
+    @Override
     public List<Mailbox<Long>> list() throws MailboxException {
         return new ArrayList<Mailbox<Long>>(mailboxesById.values());
     }
 
+    @Override
     public <T> T execute(Transaction<T> transaction) throws MailboxException {
         return transaction.run();
     }

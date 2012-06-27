@@ -20,6 +20,7 @@
 package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * <code>LIST</code> and <code>LSUB</code> return identical data.
@@ -40,11 +41,11 @@ public abstract class AbstractListingResponse {
 
     private final char hierarchyDelimiter;
 
-    private final String name;
+    private final UnresolvedMailboxName name;
 
     private MailboxType type;
 
-    public AbstractListingResponse(final boolean noInferiors, final boolean noSelect, final boolean marked, final boolean unmarked, boolean hasChildren, boolean hasNoChildren, final String name, final char hierarchyDelimiter, final MailboxType type) {
+    public AbstractListingResponse(final boolean noInferiors, final boolean noSelect, final boolean marked, final boolean unmarked, boolean hasChildren, boolean hasNoChildren, final UnresolvedMailboxName name, final char hierarchyDelimiter, final MailboxType type) {
         super();
         this.noInferiors = noInferiors;
         this.noSelect = noSelect;
@@ -80,7 +81,7 @@ public abstract class AbstractListingResponse {
      * 
      * @return name of the listed mailbox, not null
      */
-    public final String getName() {
+    public final UnresolvedMailboxName getName() {
         return name;
     }
 
@@ -165,36 +166,26 @@ public abstract class AbstractListingResponse {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
-        if (obj == null)
+        }
+        else if (o instanceof AbstractListingResponse) {
+            AbstractListingResponse other = (AbstractListingResponse) o;
+            return this.children == other.children
+                    && this.noChildren == other.noChildren
+                    && this.noInferiors == other.noInferiors
+                    && this.noSelect == other.noSelect
+                    && this.marked == other.marked
+                    && this.unmarked == other.unmarked
+                    && this.hierarchyDelimiter == other.hierarchyDelimiter
+                    && this.type.equals(other.type)
+                    && ((this.name == other.name) || (this.name != null && this.name.equals(other.name)))
+                    ;
+        }
+        else {
             return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final AbstractListingResponse other = (AbstractListingResponse) obj;
-        if (children != other.children)
-            return false;
-        if (hierarchyDelimiter != other.hierarchyDelimiter)
-            return false;
-        if (marked != other.marked)
-            return false;
-        if (name == null) {
-            if (other.name != null)
-                return false;
-        } else if (!name.equals(other.name))
-            return false;
-        if (noChildren != other.noChildren)
-            return false;
-        if (noInferiors != other.noInferiors)
-            return false;
-        if (noSelect != other.noSelect)
-            return false;
-        if (unmarked != other.unmarked)
-            return false;
-        if (!type.equals(other.type))
-            return false;
-        return true;
+        }
     }
 
     /**

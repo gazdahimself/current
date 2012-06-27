@@ -38,8 +38,9 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 
 public class CopyProcessor extends AbstractMailboxProcessor<CopyRequest> {
 
@@ -55,12 +56,14 @@ public class CopyProcessor extends AbstractMailboxProcessor<CopyRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(CopyRequest request, final ImapSession session, String tag, ImapCommand command, final Responder responder) {
-        final MailboxPath targetMailbox = buildFullPath(session, request.getMailboxName());
+        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final MailboxName targetMailbox = nameResolver.resolve(request.getMailboxName(), mailboxSession.getUser().getUserName());
+
         final IdRange[] idSet = request.getIdSet();
         final boolean useUids = request.isUseUids();
         final SelectedMailbox currentMailbox = session.getSelected();
         try {
-            final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
             final MailboxManager mailboxManager = getMailboxManager();
             final boolean mailboxExists = mailboxManager.mailboxExists(targetMailbox, mailboxSession);
 

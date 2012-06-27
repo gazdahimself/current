@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.model;
 
+import org.apache.james.mailbox.name.MailboxName;
+
 /**
  * Returned by the list method of MailboxRepository and others
  */
@@ -65,18 +67,11 @@ public interface MailboxMetaData {
      * Gets the RFC3501 Selectability flag.
      */
     Selectability getSelectability();
-
+    
     /**
-     * Return the delimiter
-     * 
-     * @return delimiter
+     * TODO getMailboxName.
+     *
+     * @return
      */
-    char getHierarchyDelimiter();
-
-    /**
-     * Return the MailboxPath
-     * 
-     * @return path
-     */
-    MailboxPath getPath();
+    MailboxName getMailboxName();
 }

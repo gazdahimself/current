@@ -19,13 +19,14 @@
 package org.apache.james.imap.message.request;
 
 import org.apache.james.imap.api.ImapCommand;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 
 /**
  * XLIST command request
  */
 public class XListRequest extends ListRequest {
 
-    public XListRequest(final ImapCommand command, final String referenceName, final String mailboxPattern, final String tag) {
+    public XListRequest(final ImapCommand command, final UnresolvedMailboxName referenceName, final UnresolvedMailboxName mailboxPattern, final String tag) {
         super(command, referenceName, mailboxPattern, tag);
     }
 

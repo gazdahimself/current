@@ -103,4 +103,31 @@ public class CharsetUtil {
         return new String(encode.array(), 0, encode.remaining());
 
     }
+    
+    public static String encodeDelimiterAwareModifiedUTF7(String string, char delimiter) {
+        ByteBuffer encode = X_MODIFIED_UTF_7_CHARSET.encode(string);
+        int encodeLength = encode.remaining();
+        String encodedDelimiter = null;
+        switch (delimiter) {
+        case '.':
+            encodedDelimiter = "&AC4-";
+            break;
+        case '/':
+            encodedDelimiter = "&AC8-";
+            break;
+        default:
+            throw new IllegalStateException("Unsupported delimiter '"+ delimiter +"'.");
+        }
+        StringBuilder sb = new StringBuilder(encodeLength + encodeLength/4 + 5);
+        while (encode.hasRemaining()) {
+            char ch = (char) encode.get();
+            if (ch == (byte) delimiter) {
+                sb.append(encodedDelimiter);
+            }
+            else {
+                sb.append(ch);
+            }
+        }
+        return sb.toString();
+    }
 }

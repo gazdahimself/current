@@ -24,6 +24,7 @@ import java.util.Collection;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Interface which represent a selected Mailbox during the selected state
@@ -97,7 +98,7 @@ public interface SelectedMailbox {
      * 
      * @return path
      */
-    public MailboxPath getPath();
+    public MailboxName getPath();
 
     /**
      * Is the given uid recent ?

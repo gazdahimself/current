@@ -46,7 +46,8 @@ public interface HBaseNames {
     /** HBase column qualifiers: field names stored as byte arrays*/
     public static final byte[] MAILBOX_NAME = Bytes.toBytes("name");
     public static final byte[] MAILBOX_USER = Bytes.toBytes("user");
-    public static final byte[] MAILBOX_NAMESPACE = Bytes.toBytes("namespace");
+    public static final byte[] MAILBOX_OWNER_IS_GROUP = Bytes.toBytes("isOwnerGroup");
+    //public static final byte[] MAILBOX_NAMESPACE = Bytes.toBytes("namespace");
     public static final byte[] MAILBOX_LASTUID = Bytes.toBytes("lastUID");
     public static final byte[] MAILBOX_UIDVALIDITY = Bytes.toBytes("uidValidity");
     public static final byte[] MAILBOX_HIGHEST_MODSEQ = Bytes.toBytes("hModSeq");

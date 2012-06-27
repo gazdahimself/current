@@ -19,15 +19,14 @@
 
 package org.apache.james.mailbox.store;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
 import org.slf4j.Logger;
 
 /**
@@ -35,12 +34,6 @@ import org.slf4j.Logger;
  */
 public class SimpleMailboxSession implements MailboxSession, MailboxSession.User {
 
-    private final Collection<String> sharedSpaces;
-
-    private final String otherUsersSpace;
-
-    private final String personalSpace;
-    
     private final long sessionId;
     
     private final Logger log;
@@ -55,34 +48,22 @@ public class SimpleMailboxSession implements MailboxSession, MailboxSession.User
 
     private final Map<Object, Object> attributes;
     
-    private final char pathSeparator;
-
     private final SessionType type;
+    
+    private final MailboxNameResolver mailboxNameResolver;
 
+    private MailboxOwner owner;
     
     public SimpleMailboxSession(final long sessionId, final String userName, final String password,
-            final Logger log, final List<Locale> localePreferences, char pathSeparator, SessionType type) {
-        this(sessionId, userName, password, log, localePreferences, new ArrayList<String>(), null, pathSeparator, type);
-    }
-
-    public SimpleMailboxSession(final long sessionId, final String userName, final String password,
-            final Logger log, final List<Locale> localePreferences, List<String> sharedSpaces, String otherUsersSpace, char pathSeparator, SessionType type) {
+            final Logger log, final List<Locale> localePreferences, SessionType type, MailboxNameResolver mailboxNameResolver) {
         this.sessionId = sessionId;
         this.log = log;
         this.userName = userName;
         this.password = password;
-        this.otherUsersSpace = otherUsersSpace;
-        this.sharedSpaces = sharedSpaces;
         this.type = type;
-        if (otherUsersSpace == null && (sharedSpaces == null || sharedSpaces.isEmpty())) {
-            this.personalSpace = "";
-        } else {
-            this.personalSpace = MailboxConstants.USER_NAMESPACE;
-        }
-
+        this.mailboxNameResolver = mailboxNameResolver;
         this.localePreferences = localePreferences;
         this.attributes = new HashMap<Object, Object>();
-        this.pathSeparator = pathSeparator;
     }
     
     /**
@@ -145,27 +126,6 @@ public class SimpleMailboxSession implements MailboxSession, MailboxSession.User
     }
 
     /**
-     * @see org.apache.james.mailbox.MailboxSession#getOtherUsersSpace()
-     */
-    public String getOtherUsersSpace() {
-        return otherUsersSpace;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.MailboxSession#getPersonalSpace()
-     */
-    public String getPersonalSpace() {
-        return personalSpace;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.MailboxSession#getSharedSpaces()
-     */
-    public Collection<String> getSharedSpaces() {
-        return sharedSpaces;
-    }
-
-    /**
      * @see org.apache.james.mailbox.MailboxSession.User#getLocalePreferences()
      */
     public List<Locale> getLocalePreferences() {
@@ -187,17 +147,31 @@ public class SimpleMailboxSession implements MailboxSession, MailboxSession.User
     }
 
     /**
-     * @see org.apache.james.mailbox.MailboxSession#getPathDelimiter()
-     */
-    public char getPathDelimiter() {
-        return pathSeparator;
-    }
-
-    /**
      * @see org.apache.james.mailbox.MailboxSession#getType()
      */
     public SessionType getType() {
         return type;
+    }
+
+    /**
+     * @see org.apache.james.mailbox.MailboxSession#getMailboxNameResolver()
+     */
+    @Override
+    public MailboxNameResolver getMailboxNameResolver() {
+        return mailboxNameResolver;
+    }
+
+    /**
+     * @see org.apache.james.mailbox.MailboxSession#getOwner()
+     */
+    @Override
+    public MailboxOwner getOwner() {
+        MailboxOwner result = this.owner;
+        if (result == null) {
+            result = mailboxNameResolver.getOwner(userName, false);
+            this.owner = result;
+        }
+        return result ;
     }
 
 }

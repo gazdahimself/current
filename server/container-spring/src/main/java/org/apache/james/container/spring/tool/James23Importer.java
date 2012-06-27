@@ -35,7 +35,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.mailrepository.api.MailRepositoryStore.MailRepositoryStoreException;
@@ -148,7 +148,7 @@ public class James23Importer implements LogEnabled {
 
 
             MailboxSession mailboxSession = mailboxManager.createSystemSession(userName30, log);
-            MailboxPath mailboxPath = MailboxPath.inbox(mailboxSession);
+            MailboxName mailboxPath = mailboxSession.getMailboxNameResolver().getInbox(mailboxSession.getOwner());
 
             mailboxManager.startProcessingRequest(mailboxSession);
             try {

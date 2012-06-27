@@ -18,8 +18,6 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir;
 
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -32,9 +30,10 @@ import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.exception.MailboxExistsException;
+import org.apache.james.mailbox.maildir.locator.LocalAndVirtualMailboxLocatorChain;
+import org.apache.james.mailbox.maildir.locator.LocalSystemMaildirLocator;
+import org.apache.james.mailbox.maildir.locator.VirtualMaildirLocator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
-import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +43,11 @@ import org.junit.Test;
  */
 public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
     
-    private static final String MAILDIR_HOME = "target/Maildir";
+    private static final File MAILDIR_HOME = new File("target/Maildir");
+    private static final File MAILDIR_HOME_USERS = new File(MAILDIR_HOME, "users");
+    private static final File MAILDIR_HOME_GROUPS = new File(MAILDIR_HOME, "groups");
+    private static final File MAILDIR_HOME_DOMAINS = new File(MAILDIR_HOME, "domains");
+    private LocalSystemMaildirLocator maildirLocator;
 
     /**
      * Setup the mailboxManager.
@@ -56,7 +59,8 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
         if (OsDetector.isWindows()) {
             System.out.println("Maildir tests work only on non-windows systems. So skip the test");
         } else {
-          deleteMaildirTestDirectory();
+            deleteMaildirTestDirectory();
+            maildirLocator = new LocalAndVirtualMailboxLocatorChain(MAILDIR_HOME_USERS, MAILDIR_HOME_GROUPS, MAILDIR_HOME_DOMAINS);
         }
     }
     
@@ -70,7 +74,7 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
         if (OsDetector.isWindows()) {
             System.out.println("Maildir tests work only on non-windows systems. So skip the test");
         } else {
-          deleteMaildirTestDirectory();
+            deleteMaildirTestDirectory();
         }
     }
 
@@ -84,18 +88,25 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
         if (OsDetector.isWindows()) {
             System.out.println("Maildir tests work only on non-windows systems. So skip the test");
         } else {
+            maildirLocator = new LocalAndVirtualMailboxLocatorChain(MAILDIR_HOME_USERS, MAILDIR_HOME_GROUPS, MAILDIR_HOME_DOMAINS);
 
-            doTestListWithMaildirStoreConfiguration("/%domain/%user");
+            MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
+            MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
+            MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+            GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
 
-            // TODO Tests fail with /%user configuration
+            MaildirMailboxManager<Integer> manager = new MaildirMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
+            manager.init();
+            setMailboxManager(manager);
             try {
-                doTestListWithMaildirStoreConfiguration("/%user");
-                fail();
-            } catch (MailboxExistsException e) {
-                // This is expected as the there are many users which have the same localpart
+                super.testList();
+            } finally {
+                try {
+                    deleteMaildirTestDirectory();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-            // TODO Tests fail with /%fulluser configuration
-            doTestListWithMaildirStoreConfiguration("/%fulluser");
 
         }
             
@@ -111,14 +122,17 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
         if (OsDetector.isWindows()) {
             System.out.println("Maildir tests work only on non-windows systems. So skip the test");
         } else {
+            
+            
+            
 
-            MaildirStore store = new MaildirStore(MAILDIR_HOME + "/%domain/%user", new JVMMailboxPathLocker());
+            MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
             MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
             
             MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
 
-            StoreMailboxManager<Integer> manager = new StoreMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
+            MaildirMailboxManager<Integer> manager = new MaildirMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
             manager.init();
             setMailboxManager(manager);
             try {
@@ -146,12 +160,12 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
             System.out.println("Maildir tests work only on non-windows systems. So skip the test");
         } else {
 
-            MaildirStore store = new MaildirStore(MAILDIR_HOME + "/%domain/%user", new JVMMailboxPathLocker());
+            MaildirStore store = new MaildirStore(new JVMMailboxPathLocker(), maildirLocator);
             MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
             MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
 
-            StoreMailboxManager<Integer> manager = new StoreMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
+            MaildirMailboxManager<Integer> manager = new MaildirMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
             manager.init();
             setMailboxManager(manager);
             try {
@@ -170,34 +184,6 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
     }
 
     /**
-     * Create the maildirStore with the provided configuration and executes the list() tests.
-     * Cleans the generated artifacts.
-     * 
-     * @param maildirStoreConfiguration
-     * @throws MailboxException
-     * @throws UnsupportedEncodingException
-     */
-    private void doTestListWithMaildirStoreConfiguration(String maildirStoreConfiguration) throws MailboxException, UnsupportedEncodingException {
-        MaildirStore store = new MaildirStore(MAILDIR_HOME + maildirStoreConfiguration, new JVMMailboxPathLocker());
-        MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
-        GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
-
-        StoreMailboxManager<Integer> manager = new StoreMailboxManager<Integer>(mf, null, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
-        manager.init();
-        setMailboxManager(manager);
-        try {
-            super.testList();
-        } finally {
-            try {
-                deleteMaildirTestDirectory();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
      * @see org.apache.james.mailbox.MailboxManagerTest#createMailboxManager()
      */
     @Override
@@ -211,7 +197,7 @@ public class MaildirMailboxManagerTest extends AbstractMailboxManagerTest {
      * @throws IOException
      */
     private void deleteMaildirTestDirectory() throws IOException {
-        FileUtils.deleteDirectory(new File(MAILDIR_HOME));
+        FileUtils.deleteDirectory(MAILDIR_HOME);
     }
     
 }

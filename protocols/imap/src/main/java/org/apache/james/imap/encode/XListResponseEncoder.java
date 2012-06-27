@@ -39,7 +39,7 @@ public class XListResponseEncoder extends AbstractChainedImapEncoder {
 
     protected void doEncode(final ImapMessage acceptableMessage, final ImapResponseComposer composer, ImapSession session) throws IOException {
         final AbstractListingResponse response = (AbstractListingResponse) acceptableMessage;
-        ListingEncodingUtils.encodeListingResponse(ImapConstants.XLIST_RESPONSE_NAME, composer, response);
+        ListingEncodingUtils.encodeListingResponse(ImapConstants.XLIST_RESPONSE_NAME, composer, response, session.getMailboxNameCodec());
     }
 
     protected boolean isAcceptable(ImapMessage message) {

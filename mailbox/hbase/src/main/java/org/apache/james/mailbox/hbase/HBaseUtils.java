@@ -18,11 +18,48 @@
  ****************************************************************/
 package org.apache.james.mailbox.hbase;
 
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_ANSWERED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_DELETED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_DRAFT;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_FLAGGED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_RECENT;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_SEEN;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_USER;
+import static org.apache.james.mailbox.hbase.FlagConvertor.PREFIX_SFLAGS_B;
+import static org.apache.james.mailbox.hbase.FlagConvertor.PREFIX_UFLAGS_B;
+import static org.apache.james.mailbox.hbase.FlagConvertor.systemFlagFromBytes;
+import static org.apache.james.mailbox.hbase.FlagConvertor.userFlagFromBytes;
+import static org.apache.james.mailbox.hbase.FlagConvertor.userFlagToBytes;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_HIGHEST_MODSEQ;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_LASTUID;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_MESSAGE_COUNT;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_NAME;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_OWNER_IS_GROUP;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_UIDVALIDITY;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_USER;
+import static org.apache.james.mailbox.hbase.HBaseNames.MARKER_MISSING;
+import static org.apache.james.mailbox.hbase.HBaseNames.MARKER_PRESENT;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_META_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_BODY_OCTETS;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_CONTENT_OCTETS;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_INTERNALDATE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_MEDIA_TYPE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_MODSEQ;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_SUB_TYPE;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGE_TEXT_LINE_COUNT;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
+import static org.apache.james.mailbox.hbase.PropertyConvertor.PREFIX_PROP_B;
+import static org.apache.james.mailbox.hbase.PropertyConvertor.getProperty;
+import static org.apache.james.mailbox.hbase.PropertyConvertor.getQualifier;
+import static org.apache.james.mailbox.hbase.PropertyConvertor.getValue;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.UUID;
+
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
@@ -33,18 +70,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
-import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.hbase.mail.HBaseMessage;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.user.model.Subscription;
-
-import static org.apache.james.mailbox.hbase.FlagConvertor.*;
-import static org.apache.james.mailbox.hbase.PropertyConvertor.*;
-import static org.apache.james.mailbox.hbase.HBaseNames.*;
 
 /**
  * HBase utility classes for mailbox and message manipulation.
@@ -58,14 +92,12 @@ public class HBaseUtils {
      * @param result a result of a HBase Get operation 
      * @return a Mailbox object
      */
-    public static Mailbox<UUID> mailboxFromResult(Result result) {
+    public static Mailbox<UUID> mailboxFromResult(Result result, MailboxNameCodec mailboxNameCodec) {
         NavigableMap<byte[], byte[]> rawMailbox = result.getFamilyMap(MAILBOX_CF);
-        //TODO: should we test for null values?
-        MailboxPath path = new MailboxPath(Bytes.toString(rawMailbox.get(MAILBOX_NAMESPACE)),
-                Bytes.toString(rawMailbox.get(MAILBOX_USER)),
-                Bytes.toString(rawMailbox.get(MAILBOX_NAME)));
-
-        HBaseMailbox mailbox = new HBaseMailbox(path, Bytes.toLong(rawMailbox.get(MAILBOX_UIDVALIDITY)));
+        MailboxName mailboxName = mailboxNameCodec.decode(Bytes.toString(rawMailbox.get(MAILBOX_NAME)), true);
+        String user = Bytes.toString(rawMailbox.get(MAILBOX_USER));
+        boolean isOwnerGroup = Bytes.toBoolean(rawMailbox.get(MAILBOX_OWNER_IS_GROUP));
+        HBaseMailbox mailbox = new HBaseMailbox(mailboxName, user, isOwnerGroup, Bytes.toLong(rawMailbox.get(MAILBOX_UIDVALIDITY)));
         mailbox.setMailboxId(UUIDFromRowKey(result.getRow()));
         mailbox.setHighestModSeq(Bytes.toLong(rawMailbox.get(MAILBOX_HIGHEST_MODSEQ)));
         mailbox.setLastUid(Bytes.toLong(rawMailbox.get(MAILBOX_LASTUID)));
@@ -101,19 +133,14 @@ public class HBaseUtils {
      * Transforms the mailbox into a Put operation.
      * @return a Put object
      */
-    public static Put toPut(HBaseMailbox mailbox) {
+    public static Put toPut(HBaseMailbox mailbox, MailboxNameCodec mailboxNameCodec) {
         Put put = new Put(mailboxRowKey(mailbox.getMailboxId()));
         // we don't store null values and we don't restore them. it's a column based store.
-        if (mailbox.getName() != null) {
-            put.add(MAILBOX_CF, MAILBOX_NAME, Bytes.toBytes(mailbox.getName()));
-        }
-
-        if (mailbox.getUser() != null) {
-            put.add(MAILBOX_CF, MAILBOX_USER, Bytes.toBytes(mailbox.getUser()));
-        }
-        if (mailbox.getNamespace() != null) {
-            put.add(MAILBOX_CF, MAILBOX_NAMESPACE, Bytes.toBytes(mailbox.getNamespace()));
-        }
+        
+        put.add(MAILBOX_CF, MAILBOX_NAME, Bytes.toBytes(mailboxNameCodec.encode(mailbox.getMailboxName())));
+        put.add(MAILBOX_CF, MAILBOX_USER, Bytes.toBytes(mailbox.getUser()));
+        put.add(MAILBOX_CF, MAILBOX_OWNER_IS_GROUP, Bytes.toBytes(mailbox.isOwnerGroup()));
+        
         put.add(MAILBOX_CF, MAILBOX_LASTUID, Bytes.toBytes(mailbox.getLastUid()));
         put.add(MAILBOX_CF, MAILBOX_UIDVALIDITY, Bytes.toBytes(mailbox.getUidValidity()));
         put.add(MAILBOX_CF, MAILBOX_HIGHEST_MODSEQ, Bytes.toBytes(mailbox.getHighestModSeq()));
@@ -304,9 +331,9 @@ public class HBaseUtils {
      * Creates a Put object from this subscription object
      * @return Put object suitable for HBase persistence
      */
-    public static Put toPut(Subscription subscription) {
+    public static Put toPut(Subscription subscription, MailboxNameCodec mailboxNameCodec) {
         Put put = new Put(Bytes.toBytes(subscription.getUser()));
-        put.add(SUBSCRIPTION_CF, Bytes.toBytes(subscription.getMailbox()), MARKER_PRESENT);
+        put.add(SUBSCRIPTION_CF, Bytes.toBytes(mailboxNameCodec.encode(subscription.getMailbox())), MARKER_PRESENT);
         return put;
     }
 

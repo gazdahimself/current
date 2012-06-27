@@ -19,15 +19,19 @@
 
 package org.apache.james.imap.encode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.james.imap.api.ImapMessage;
-import org.apache.james.imap.encode.ImapEncoder;
-import org.apache.james.imap.encode.ImapResponseComposer;
-import org.apache.james.imap.encode.MailboxStatusResponseEncoder;
+import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.MailboxStatusResponse;
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.name.MailboxNameBuilder;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
 import org.jmock.integration.junit4.JUnit4Mockery;
@@ -37,30 +41,31 @@ import org.junit.runner.RunWith;
 
 @RunWith(JMock.class)
 public class MailboxStatusResponseEncoderTest  {
+    private static final UnresolvedMailboxName MAILBOX_NAME = new MailboxNameBuilder(2).add(MailboxConstants.INBOX).add("sub").unqualified();
 
-    MailboxStatusResponseEncoder encoder;
+    private static final MailboxNameCodec MAILBOX_NAME_CODEC = MailboxNameCodec.DEFAULT_IMAP_NAME_CODEC;
 
-    ImapEncoder mockNextEncoder;
+    private ImapResponseComposer composer;
 
-    ByteImapResponseWriter writer = new ByteImapResponseWriter();
-    ImapResponseComposer composer = new ImapResponseComposerImpl(writer);
-    
     private Mockery context = new JUnit4Mockery();
+    private MailboxStatusResponseEncoder encoder;
+    
+    private ImapSession imapSession;
+
+    private ImapEncoder mockNextEncoder;
+
+    private ByteImapResponseWriter writer;
     
     @Before
     public void setUp() throws Exception {
+        writer = new ByteImapResponseWriter();
+        composer = new ImapResponseComposerImpl(writer);
+        
         mockNextEncoder = context.mock(ImapEncoder.class);
         encoder = new MailboxStatusResponseEncoder(mockNextEncoder);
+        imapSession = new FakeImapSession(MAILBOX_NAME_CODEC);
     }
     
-
-    @Test
-    public void testIsAcceptable() throws Exception {
-        assertTrue(encoder.isAcceptable(new MailboxStatusResponse(null, null, null,
-                null, null, null, "mailbox")));
-        assertFalse(encoder.isAcceptable(context.mock(ImapMessage.class)));
-        assertFalse(encoder.isAcceptable(null));
-    }
 
     @Test
     public void testDoEncode() throws Exception {
@@ -69,10 +74,17 @@ public class MailboxStatusResponseEncoderTest  {
         final Long uidNext = new Long(5);
         final Long uidValidity = new Long(7);
         final Long unseen = new Long(11);
-        final String mailbox = "A mailbox named desire";
 
         encoder.encode(new MailboxStatusResponse(messages, recent, uidNext,
-                null, uidValidity, unseen, mailbox), composer, new FakeImapSession());
-        assertEquals("* STATUS \"A mailbox named desire\" (MESSAGES 2 RECENT 3 UIDNEXT 5 UIDVALIDITY 7 UNSEEN 11)\r\n", writer.getString());
+                null, uidValidity, unseen, MAILBOX_NAME), composer, imapSession );
+        assertEquals("* STATUS \""+ imapSession.getMailboxNameCodec().encode(MAILBOX_NAME) +"\" (MESSAGES 2 RECENT 3 UIDNEXT 5 UIDVALIDITY 7 UNSEEN 11)\r\n", writer.getString());
+    }
+
+    @Test
+    public void testIsAcceptable() throws Exception {
+        assertTrue(encoder.isAcceptable(new MailboxStatusResponse(null, null, null,
+                null, null, null, MAILBOX_NAME)));
+        assertFalse(encoder.isAcceptable(context.mock(ImapMessage.class)));
+        assertFalse(encoder.isAcceptable(null));
     }
 }

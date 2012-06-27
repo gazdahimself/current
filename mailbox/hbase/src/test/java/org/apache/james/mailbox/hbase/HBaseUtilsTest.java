@@ -18,31 +18,61 @@
  ****************************************************************/
 package org.apache.james.mailbox.hbase;
 
-import java.util.Date;
-import java.util.UUID;
-import javax.mail.Flags;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
-import static org.apache.james.mailbox.hbase.FlagConvertor.*;
-import static org.apache.james.mailbox.hbase.HBaseNames.*;
-import static org.apache.james.mailbox.hbase.HBaseUtils.*;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_ANSWERED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_DELETED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_DRAFT;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_FLAGGED;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_RECENT;
+import static org.apache.james.mailbox.hbase.FlagConvertor.FLAGS_SEEN;
+import static org.apache.james.mailbox.hbase.FlagConvertor.userFlagToBytes;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_HIGHEST_MODSEQ;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_LASTUID;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_MESSAGE_COUNT;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_NAME;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_UIDVALIDITY;
+import static org.apache.james.mailbox.hbase.HBaseNames.MAILBOX_USER;
+import static org.apache.james.mailbox.hbase.HBaseNames.MARKER_MISSING;
+import static org.apache.james.mailbox.hbase.HBaseNames.MARKER_PRESENT;
+import static org.apache.james.mailbox.hbase.HBaseNames.MESSAGES_META_CF;
+import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
+import static org.apache.james.mailbox.hbase.HBaseUtils.UUIDFromRowKey;
+import static org.apache.james.mailbox.hbase.HBaseUtils.flagsToPut;
+import static org.apache.james.mailbox.hbase.HBaseUtils.mailboxRowKey;
+import static org.apache.james.mailbox.hbase.HBaseUtils.toPut;
 import static org.apache.james.mailbox.hbase.PropertyConvertor.getProperty;
 import static org.apache.james.mailbox.hbase.PropertyConvertor.getValue;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Date;
+import java.util.UUID;
+
+import javax.mail.Flags;
+
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.mailbox.store.user.model.Subscription;
 import org.apache.james.mailbox.store.user.model.impl.SimpleSubscription;
-import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
  * Tests for HBase Mailbox store utility methods .
  */
 public class HBaseUtilsTest {
+    
+    private static final String USER = "ieugen";
+    private static final MailboxName INBOX = DefaultMailboxNameResolver.INSTANCE.getInbox(USER);
+    private static final MailboxNameCodec MAILBOX_NAME_CODEC = MailboxNameCodec.SAFE_STORE_NAME_CODEC;
 
     /**
      * Test of mailboxRowKey method, of class HBaseMailbox.
@@ -50,7 +80,7 @@ public class HBaseUtilsTest {
     @Test
     public void testRowKey_All() {
         System.out.println("getRowKey and UUIDFromRowKey");
-        final HBaseMailbox mailbox = new HBaseMailbox(new MailboxPath("gsoc", "ieugen", "INBOX"), 1234);
+        final HBaseMailbox mailbox = new HBaseMailbox(INBOX, USER, false, 1234);
         UUID uuid = mailbox.getMailboxId();
         byte[] expResult = mailboxRowKey(uuid);
         byte[] result = mailboxRowKey(mailbox.getMailboxId());
@@ -69,13 +99,12 @@ public class HBaseUtilsTest {
     @Test
     public void testMailboxToPut() {
         System.out.println("mailboxToPut");
-        final HBaseMailbox instance = new HBaseMailbox(new MailboxPath("gsoc", "ieugen", "INBOX"), 1234);
+        final HBaseMailbox instance = new HBaseMailbox(INBOX, USER, false, 1234);
 
-        Put result = toPut(instance);
+        Put result = toPut(instance, MAILBOX_NAME_CODEC);
         assertArrayEquals(mailboxRowKey(instance.getMailboxId()), result.getRow());
         assertTrue(result.has(MAILBOX_CF, MAILBOX_USER, Bytes.toBytes(instance.getUser())));
-        assertTrue(result.has(MAILBOX_CF, MAILBOX_NAME, Bytes.toBytes(instance.getName())));
-        assertTrue(result.has(MAILBOX_CF, MAILBOX_NAMESPACE, Bytes.toBytes(instance.getNamespace())));
+        assertTrue(result.has(MAILBOX_CF, MAILBOX_NAME, Bytes.toBytes(MAILBOX_NAME_CODEC.encode(instance.getMailboxName()))));
         assertTrue(result.has(MAILBOX_CF, MAILBOX_UIDVALIDITY, Bytes.toBytes(instance.getUidValidity())));
         assertTrue(result.has(MAILBOX_CF, MAILBOX_LASTUID, Bytes.toBytes(instance.getLastUid())));
         assertTrue(result.has(MAILBOX_CF, MAILBOX_HIGHEST_MODSEQ, Bytes.toBytes(instance.getHighestModSeq())));
@@ -104,10 +133,10 @@ public class HBaseUtilsTest {
     @Test
     public void testSubscriptionToPut() {
         System.out.println("subscription toPut");
-        Subscription subscription = new SimpleSubscription("ieugen", "INBOX");
-        Put put = toPut(subscription);
+        Subscription subscription = new SimpleSubscription("ieugen", INBOX);
+        Put put = toPut(subscription, MAILBOX_NAME_CODEC);
         assertArrayEquals(Bytes.toBytes(subscription.getUser()), put.getRow());
-        assertTrue(put.has(SUBSCRIPTION_CF, Bytes.toBytes(subscription.getMailbox()), MARKER_PRESENT));
+        assertTrue(put.has(SUBSCRIPTION_CF, Bytes.toBytes(MAILBOX_NAME_CODEC.encode(subscription.getMailbox())), MARKER_PRESENT));
     }
 
     @Test
@@ -122,7 +151,7 @@ public class HBaseUtilsTest {
         flags.add("userFlag1");
         flags.add("userFlag2");
         UUID uuid = UUID.randomUUID();
-        final SimpleMessage message = new SimpleMessage(new Date(), 100, 10, null, flags, new PropertyBuilder(), uuid);
+        final SimpleMessage<UUID> message = new SimpleMessage<UUID>(new Date(), 100, 10, null, flags, new PropertyBuilder(), uuid);
         Put put = flagsToPut(message, flags);
         //test for the system flags
         assertTrue(put.has(MESSAGES_META_CF, FLAGS_SEEN, MARKER_PRESENT));

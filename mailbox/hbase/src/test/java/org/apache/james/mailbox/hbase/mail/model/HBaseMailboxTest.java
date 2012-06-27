@@ -18,15 +18,31 @@
  ****************************************************************/
 package org.apache.james.mailbox.hbase.mail.model;
 
-import java.util.UUID;
-import org.apache.james.mailbox.model.MailboxPath;
 import static org.junit.Assert.assertEquals;
+
+import java.util.UUID;
+
+import org.apache.james.mailbox.name.DefaultMailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
+import org.apache.james.mailbox.name.MailboxName;
 import org.junit.Test;
 
 /**
  * Unit tests for HBaseMailbox class.
  */
 public class HBaseMailboxTest {
+    
+
+    private static final MailboxNameResolver MAILBOX_NAME_RESOLVER = DefaultMailboxNameResolver.INSTANCE;
+    private static final String TEST_USER;
+    private static final MailboxOwner TEST_OWNER;
+    private static final MailboxName TEST_INBOX;
+    static {
+        TEST_USER = "ieugen";
+        TEST_OWNER = MAILBOX_NAME_RESOLVER.getOwner(TEST_USER, false);
+        TEST_INBOX = MAILBOX_NAME_RESOLVER.getInbox(TEST_OWNER);
+    }
 
     /**
      * Test of getter and setter for MailboxId
@@ -34,8 +50,7 @@ public class HBaseMailboxTest {
     @Test
     public void testGetSetMailboxId() {
         System.out.println("getSetMailboxId");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 10);
+        final HBaseMailbox instance = new HBaseMailbox(TEST_INBOX, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 10);
 
         UUID expResult = UUID.randomUUID();
         instance.setMailboxId(expResult);
@@ -47,15 +62,16 @@ public class HBaseMailboxTest {
      * Test of getter and setter for Namespace, of class HBaseMailbox.
      */
     @Test
-    public void testGetSetNamespace() {
+    public void testGetSetMailboxName() {
         System.out.println("getSetNamespace");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 124566);
-        String result = instance.getNamespace();
-        assertEquals(mailboxPath.getNamespace(), result);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 124566);
+        MailboxName result = instance.getMailboxName();
+        assertEquals(mailboxPath, result);
 
-        instance.setNamespace("newName");
-        assertEquals("newName", instance.getNamespace());
+        MailboxName newName = mailboxPath.child("new");
+        instance.setMailboxName(newName);
+        assertEquals(newName, instance.getMailboxName());
 
     }
 
@@ -65,28 +81,13 @@ public class HBaseMailboxTest {
     @Test
     public void testGetSetUser() {
         System.out.println("getUser");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 12);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 12);
         String result = instance.getUser();
-        assertEquals(mailboxPath.getUser(), result);
+        assertEquals(TEST_OWNER.getName(), result);
 
         instance.setUser("eric");
         assertEquals("eric", instance.getUser());
-    }
-
-    /**
-     * Test of getter and setter for Name, of class HBaseMailbox.
-     */
-    @Test
-    public void testGetSetName() {
-        System.out.println("getSetName");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 1677);
-        String result = instance.getName();
-        assertEquals(mailboxPath.getName(), result);
-
-        instance.setName("newINBOX");
-        assertEquals("newINBOX", instance.getName());
     }
 
     /**
@@ -95,12 +96,11 @@ public class HBaseMailboxTest {
     @Test
     public void testGetUidValidity() {
         System.out.println("getUidValidity");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 123345);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 123345);
         long expResult = 123345L;
         long result = instance.getUidValidity();
         assertEquals(expResult, result);
-
     }
 
     /**
@@ -109,8 +109,8 @@ public class HBaseMailboxTest {
     @Test
     public void testHashCode() {
         System.out.println("hashCode");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 1234);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 1234);
         // from the hashCode()
         final int PRIME = 31;
         int result = 1;
@@ -126,9 +126,9 @@ public class HBaseMailboxTest {
     @Test
     public void testEquals() {
         System.out.println("equals");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 12345);
-        final HBaseMailbox instance2 = new HBaseMailbox(mailboxPath, 12345);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 12345);
+        final HBaseMailbox instance2 = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 12345);
         instance2.setMailboxId(instance.getMailboxId());
         assertEquals(instance, instance2);
     }
@@ -139,8 +139,8 @@ public class HBaseMailboxTest {
     @Test
     public void testConsumeUid() {
         System.out.println("consumeUid");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 10);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 10);
         long expResult = instance.getLastUid() + 1;
         long result = instance.consumeUid();
         assertEquals(expResult, result);
@@ -152,8 +152,8 @@ public class HBaseMailboxTest {
     @Test
     public void testConsumeModSeq() {
         System.out.println("consumeModSeq");
-        final MailboxPath mailboxPath = new MailboxPath("gsoc", "ieugen", "INBOX");
-        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, 10);
+        final MailboxName mailboxPath = TEST_INBOX;
+        final HBaseMailbox instance = new HBaseMailbox(mailboxPath, TEST_OWNER.getName(), TEST_OWNER.isGroup(), 10);
         long expResult = instance.getHighestModSeq() + 1;
         long result = instance.consumeModSeq();
         assertEquals(expResult, result);

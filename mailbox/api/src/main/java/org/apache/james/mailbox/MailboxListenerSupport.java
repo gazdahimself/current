@@ -21,6 +21,7 @@ package org.apache.james.mailbox;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * Implementations of this interface supports {@link MailboxListener}. Its needed that the events get handled
@@ -45,7 +46,7 @@ public interface MailboxListenerSupport {
      *            not null
      * @throws MailboxException
      */
-    void addListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException;
+    void addListener(MailboxName mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException;
 
     /**
      * Remove the {@link MailboxListener}
@@ -55,7 +56,7 @@ public interface MailboxListenerSupport {
      * @param session
      * @throws MailboxException
      */
-    void removeListener(MailboxPath mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException;
+    void removeListener(MailboxName mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException;
     
     /**
      * Add a {@link MailboxListener} which get fired for ever

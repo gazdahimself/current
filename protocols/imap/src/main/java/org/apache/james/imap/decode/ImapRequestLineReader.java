@@ -37,7 +37,6 @@ import java.util.List;
 import javax.mail.Flags;
 
 import org.apache.james.imap.api.ImapConstants;
-import org.apache.james.imap.api.display.CharsetUtil;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.message.request.DayMonthYear;
@@ -243,41 +242,6 @@ public abstract class ImapRequestLineReader {
         }
     }
 
-    /**
-     * 
-     * Reads the mailbox name via {@link #mailboxUTF7()} but also decode it via {@link CharsetUtil#decodeModifiedUTF7(String)}
-     * 
-     * If you really want to get the modified UTF7 version you should use {@link #mailboxUTF7()}
-     * 
-     * @return decodedMailbox
-     * 
-     */
-    public String mailbox() throws DecodingException {
-       return CharsetUtil.decodeModifiedUTF7(mailboxUTF7());
-    }
-
-    /**
-     * Reads a "mailbox" argument from the request. Not implemented *exactly* as
-     * per spec, since a quoted or literal "inbox" still yeilds "INBOX" (ie
-     * still case-insensitive if quoted or literal). I think this makes sense.
-     * 
-     * mailbox ::= "INBOX" / astring ;; INBOX is case-insensitive. All case
-     * variants of ;; INBOX (e.g. "iNbOx") MUST be interpreted as INBOX ;; not
-     * as an astring.
-     * 
-     * Be aware that mailbox names are encoded via a modified UTF7. For more informations RFC3501
-     * 
-     * 
-     * 
-     */
-    public String mailboxUTF7() throws DecodingException {
-        String mailbox = astring();
-        if (mailbox.equalsIgnoreCase(ImapConstants.INBOX_NAME)) {
-            return ImapConstants.INBOX_NAME;
-        } else {
-            return mailbox;
-        }
-    }
     /**
      * Reads one <code>date</code> argument from the request.
      * 

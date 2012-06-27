@@ -34,12 +34,12 @@ import java.util.Map;
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
 import org.apache.james.mailbox.model.SearchQuery;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
 import org.apache.james.mailbox.model.SearchQuery.Sort.SortClause;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.MessageBuilder;
 import org.apache.james.mailbox.store.SimpleMailboxMembership;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -715,29 +715,12 @@ public class LuceneMessageSearchIndexTest {
             return id;
         }
 
-        public String getNamespace() {
-            throw new UnsupportedOperationException("Not supported");
-        }
-
-        public void setNamespace(String namespace) {
-            throw new UnsupportedOperationException("Not supported");
-        }
-
         public String getUser() {
             throw new UnsupportedOperationException("Not supported");
         }
 
         public void setUser(String user) {
             throw new UnsupportedOperationException("Not supported");
-        }
-
-        public String getName() {
-            return Long.toString(id);
-        }
-
-        public void setName(String name) {
-            throw new UnsupportedOperationException("Not supported");
-
         }
 
         public long getUidValidity() {
@@ -749,7 +732,7 @@ public class LuceneMessageSearchIndexTest {
          */
         @Override
         public MailboxACL getACL() {
-            return SimpleMailboxACL.OWNER_FULL_ACL;
+            throw new UnsupportedOperationException("Not supported");
         }
 
         /* (non-Javadoc)
@@ -760,6 +743,34 @@ public class LuceneMessageSearchIndexTest {
             throw new UnsupportedOperationException("Not supported");
         }
 
+        @Override
+        public MailboxName getMailboxName() {
+            throw new UnsupportedOperationException("Not supported");
+        }
 
+        @Override
+        public void setMailboxName(MailboxName mailboxName) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
+        public boolean isOwnerGroup() {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
+        public void setOwnerGroup(boolean ownerGroup) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+
+    }
+
+    public SimpleMailbox getMailbox() {
+        return mailbox;
+    }
+
+    public void setMailbox(SimpleMailbox mailbox) {
+        this.mailbox = mailbox;
     }
 }

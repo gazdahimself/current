@@ -44,23 +44,25 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSession.User;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL.EditMode;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.SimpleMailboxACL;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.ReadOnlyException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.SearchQuery;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxOwner;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
@@ -228,7 +230,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
      */
     public Iterator<Long> expunge(final MessageRange set, MailboxSession mailboxSession) throws MailboxException {
         if (!isWriteable(mailboxSession)) {
-            throw new ReadOnlyException(new StoreMailboxPath<Id>(getMailboxEntity()), mailboxSession.getPathDelimiter());
+            throw new ReadOnlyException(getMailboxEntity().getMailboxName());
         }
         Map<Long, MessageMetaData> uids = deleteMarkedInMailbox(set, mailboxSession);
 
@@ -250,7 +252,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
         SharedFileInputStream contentIn = null;
 
         if (!isWriteable(mailboxSession)) {
-            throw new ReadOnlyException(new StoreMailboxPath<Id>(getMailboxEntity()), mailboxSession.getPathDelimiter());
+            throw new ReadOnlyException(getMailboxEntity().getMailboxName());
         }
 
         try {
@@ -366,7 +368,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
             final int size = (int) file.length();
 
             final Message<Id> message = createMessage(internalDate, size, bodyStartOctet, contentIn, flags, propertyBuilder);
-            return locker.executeWithLock(mailboxSession, new StoreMailboxPath<Id>(getMailboxEntity()), new MailboxPathLocker.LockAwareExecution<Long>() {
+            return locker.executeWithLock(mailboxSession, getMailboxEntity().getMailboxName(), new MailboxPathLocker.LockAwareExecution<Long>() {
 
                 @Override
                 public Long execute() throws MailboxException {
@@ -522,7 +524,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
     public Map<Long, Flags> setFlags(final Flags flags, final boolean value, final boolean replace, final MessageRange set, MailboxSession mailboxSession) throws MailboxException {
 
         if (!isWriteable(mailboxSession)) {
-            throw new ReadOnlyException(new StoreMailboxPath<Id>(getMailboxEntity()), mailboxSession.getPathDelimiter());
+            throw new ReadOnlyException(getMailboxEntity().getMailboxName());
         }
         final SortedMap<Long, Flags> newFlagsByUid = new TreeMap<Long, Flags>();
 
@@ -560,10 +562,10 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
      */
     public List<MessageRange> copyTo(final MessageRange set, final StoreMessageManager<Id> toMailbox, final MailboxSession session) throws MailboxException {
         if (!toMailbox.isWriteable(session)) {
-            throw new ReadOnlyException(new StoreMailboxPath<Id>(toMailbox.getMailboxEntity()), session.getPathDelimiter());
+            throw new ReadOnlyException(toMailbox.getMailboxEntity().getMailboxName());
         }
 
-        return locker.executeWithLock(session, new StoreMailboxPath<Id>(toMailbox.getMailboxEntity()), new MailboxPathLocker.LockAwareExecution<List<MessageRange>>() {
+        return locker.executeWithLock(session, toMailbox.getMailboxEntity().getMailboxName(), new MailboxPathLocker.LockAwareExecution<List<MessageRange>>() {
 
             @Override
             public List<MessageRange> execute() throws MailboxException {
@@ -614,7 +616,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
     protected List<Long> recent(final boolean reset, MailboxSession mailboxSession) throws MailboxException {
         if (reset) {
             if (!isWriteable(mailboxSession)) {
-                throw new ReadOnlyException(new StoreMailboxPath<Id>(getMailboxEntity()), mailboxSession.getPathDelimiter());
+                throw new ReadOnlyException(getMailboxEntity().getMailboxName());
             }
         }
         final MessageMapper<Id> messageMapper = mapperFactory.getMessageMapper(mailboxSession);
@@ -723,7 +725,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
     }
 
     /**
-     * @see org.apache.james.mailbox.MessageManager#hasRight(org.apache.james.mailbox.MailboxACL.MailboxACLRight,
+     * @see org.apache.james.mailbox.MessageManager#hasRight(org.apache.james.mailbox.acl.MailboxACL.MailboxACLRight,
      *      org.apache.james.mailbox.MailboxSession)
      */
     public boolean hasRight(MailboxACLRight right, MailboxSession session) throws UnsupportedRightException {
@@ -755,7 +757,7 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
 
     /**
      * @throws UnsupportedRightException 
-     * @see org.apache.james.mailbox.MessageManager#setRights(java.lang.String, org.apache.james.mailbox.model.MailboxACL.EditMode, org.apache.james.mailbox.model.MailboxACL.MailboxACLRights)
+     * @see org.apache.james.mailbox.MessageManager#setRights(java.lang.String, org.apache.james.mailbox.acl.MailboxACL.EditMode, org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights)
      */
     @Override
     public void setRights(MailboxACLEntryKey mailboxACLEntryKey, EditMode editMode, MailboxACLRights mailboxAclRights) throws UnsupportedRightException {
@@ -799,8 +801,14 @@ public class StoreMessageManager<Id> implements org.apache.james.mailbox.Message
      * @return
      */
     protected boolean isGroupFolder(MailboxSession session) {
-        final String ns = mailbox.getNamespace();
-        return ns == null || (!ns.equals(session.getPersonalSpace()) && !ns.equals(session.getOtherUsersSpace()));
+        MailboxNameResolver mailboxNameResolver = session.getMailboxNameResolver();
+        MailboxOwner owner = mailboxNameResolver.getOwner(mailbox.getMailboxName());
+        if (owner != null) {
+            return owner.isGroup();
+        }
+        else {
+            throw new IllegalStateException("Cannot find the owner of '"+ mailbox.getMailboxName() +"'.");
+        }
     }
 
 }

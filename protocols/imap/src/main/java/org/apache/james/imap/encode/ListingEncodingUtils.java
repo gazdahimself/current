@@ -27,16 +27,18 @@ import java.util.List;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.process.MailboxType;
 import org.apache.james.imap.message.response.AbstractListingResponse;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 
 /**
  * Utilities for encoding LIST and LSUB responses.
  */
 public class ListingEncodingUtils {
 
-    public static void encodeListingResponse(final String responseTypeName, final ImapResponseComposer composer, final AbstractListingResponse response) throws IOException {
+    public static void encodeListingResponse(final String responseTypeName, final ImapResponseComposer composer, final AbstractListingResponse response, MailboxNameCodec mailboxNameCodec) throws IOException {
         final List<String> attributes = getNameAttributes(response);
 
-        final String name = response.getName();
+        final UnresolvedMailboxName name = response.getName();
         final char hierarchyDelimiter = response.getHierarchyDelimiter();
                 
         composer.untagged();
@@ -50,12 +52,12 @@ public class ListingEncodingUtils {
         }
         composer.closeParen();
 
-        if (hierarchyDelimiter == Character.UNASSIGNED) {
+        if (hierarchyDelimiter == MailboxNameCodec.NIL_DELIMITER) {
         	composer.nil();
         } else {
         	composer.quote(Character.toString(hierarchyDelimiter));
         }
-        composer.mailbox(name);
+        composer.quote(mailboxNameCodec.encode(name));
 
         composer.end();
     }

@@ -26,14 +26,15 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.name.MailboxName;
 
 public class FakeMailboxListenerAdded extends MailboxListener.Added {
 
+    private static final long serialVersionUID = -3264467741996584324L;
     public List<Long> uids;
 
-    public FakeMailboxListenerAdded(MailboxSession session, List<Long> uids, MailboxPath path) {
+    public FakeMailboxListenerAdded(MailboxSession session, List<Long> uids, MailboxName path) {
         super(session, path);
         this.uids = uids;
     }

@@ -27,15 +27,16 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.QuotaManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.Quota;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMailboxManager;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.Message;
 
 /**
  * {@link QuotaManager} which will keep track of quota by listing for {@link org.apache.james.mailbox.MailboxListener.Event}'s.
@@ -70,15 +71,16 @@ public abstract class ListeningQuotaManager implements QuotaManager, MailboxList
         long max = getMaxMessage(session);
         if (max != Quota.UNLIMITED || calculateWhenUnlimited) {
 
-            String id = session.getUser().getUserName();
-            AtomicLong count = counts.get(id);
+            String userName = session.getUser().getUserName();
+            AtomicLong count = counts.get(userName);
             if (count == null) {
                 long mc = 0;
-                List<Mailbox> mailboxes = factory.getMailboxMapper(session).findMailboxWithPathLike(new MailboxPath(session.getPersonalSpace(), id, "%"));
+                MailboxName inbox = session.getMailboxNameResolver().getInbox(userName);
+                List<Mailbox> mailboxes = factory.getMailboxMapper(session).findMailboxWithPathLike(inbox.appendToLast(MailboxQuery.FREEWILDCARD_STRING));
                 for (int i = 0; i < mailboxes.size(); i++) {
                     mc += factory.getMessageMapper(session).countMessagesInMailbox(mailboxes.get(i));
                 }
-                AtomicLong c = counts.putIfAbsent(id, new AtomicLong(mc));
+                AtomicLong c = counts.putIfAbsent(userName, new AtomicLong(mc));
                 if (c != null) {
                     count = c;
                 }
@@ -94,12 +96,13 @@ public abstract class ListeningQuotaManager implements QuotaManager, MailboxList
         long max = getMaxStorage(session);
         if (max != Quota.UNLIMITED || calculateWhenUnlimited) {
             MessageMapper mapper = factory.getMessageMapper(session);
-        	String id = session.getUser().getUserName();
-            AtomicLong size = sizes.get(id);
+        	String userName = session.getUser().getUserName();
+            AtomicLong size = sizes.get(userName);
             
             if (size == null) {
                 final AtomicLong mSizes = new AtomicLong(0);
-                List<Mailbox> mailboxes = factory.getMailboxMapper(session).findMailboxWithPathLike(new MailboxPath(session.getPersonalSpace(), id, "%"));
+                MailboxName inbox = session.getMailboxNameResolver().getInbox(userName);
+                List<Mailbox> mailboxes = factory.getMailboxMapper(session).findMailboxWithPathLike(inbox.appendToLast(MailboxQuery.FREEWILDCARD_STRING));
                 for (int i = 0; i < mailboxes.size(); i++) {
                 	long messageSizes = 0;
                     Iterator<Message>  messages = mapper.findInMailbox(mailboxes.get(i), MessageRange.all(), FetchType.Metadata, -1);
@@ -110,7 +113,7 @@ public abstract class ListeningQuotaManager implements QuotaManager, MailboxList
                     mSizes.set(mSizes.get() + messageSizes);
                 }
 
-                AtomicLong s = sizes.putIfAbsent(id, mSizes);
+                AtomicLong s = sizes.putIfAbsent(userName, mSizes);
                 if (s != null) {
                     size = s;
                 } else {

@@ -120,17 +120,6 @@ public interface ImapResponseComposer {
     public ImapResponseComposer message(final long number) throws IOException;
 
     /**
-     * First encodes the given {@code mailboxName} using
-     * {@link CharsetUtil#encodeModifiedUTF7(String)} and then quotes the result
-     * with {@link #quote(String)}.
-     * 
-     * @param mailboxName
-     * @return
-     * @throws IOException
-     */
-    public ImapResponseComposer mailbox(final String mailboxName) throws IOException;
-
-    /**
      * Write the given sequence-set
      * 
      * @param ranges

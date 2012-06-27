@@ -25,7 +25,7 @@ import org.apache.james.protocols.api.ProtocolSession;
  * {@link Logger} which adds context informations to the logged message.
  *
  */
-public class ContextualLogger implements Logger{
+public class ContextualLogger implements Logger {
 
     private final ProtocolSession session;
     private final Logger logger;

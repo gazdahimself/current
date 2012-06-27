@@ -26,8 +26,11 @@ import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.user.model.Subscription;
 
 /**
@@ -43,8 +46,8 @@ import org.apache.james.mailbox.store.user.model.Subscription;
                         "MAILBOX_NAME"})
 )
 @NamedQueries({
-    @NamedQuery(name = "findFindMailboxSubscriptionForUser",
-        query = "SELECT subscription FROM Subscription subscription WHERE subscription.username = :userParam AND subscription.mailbox = :mailboxParam"),          
+    @NamedQuery(name = "findSubscription",
+        query = "SELECT subscription FROM Subscription subscription WHERE subscription.username = :userParam AND subscription.mailboxNameValue = :mailboxParam"),          
     @NamedQuery(name = "findSubscriptionsForUser",
         query = "SELECT subscription FROM Subscription subscription WHERE subscription.username = :userParam")                  
 })
@@ -63,10 +66,12 @@ public class JPASubscription implements Subscription {
     @Column(name = "USER_NAME", nullable = false, length = 100)
     private String username;
     
-    /** Subscribed mailbox */
     @Basic(optional = false) 
     @Column(name = "MAILBOX_NAME", nullable = false, length = 100)
-    private String mailbox;
+    private String mailboxNameValue;
+    
+    @Transient
+    private MailboxNameCodec mailboxNameCodec;
     
     /**
      * Used by JPA
@@ -79,17 +84,18 @@ public class JPASubscription implements Subscription {
      * @param username not null
      * @param mailbox not null
      */
-    public JPASubscription(String username, String mailbox) {
+    public JPASubscription(String username, MailboxName mailbox, MailboxNameCodec mailboxNameCodec) {
         super();
         this.username = username;
-        this.mailbox = mailbox;
+        this.mailboxNameCodec = mailboxNameCodec;
+        setMailboxNameValue(mailboxNameCodec.encode(mailbox));
     }
 
     /**
      * @see org.apache.james.mailbox.store.user.model.Subscription#getMailbox()
      */
-    public String getMailbox() {
-        return mailbox;
+    public MailboxName getMailbox() {
+        return mailboxNameCodec.decode(getMailboxNameValue(), true);
     }
     
     /**
@@ -130,9 +136,21 @@ public class JPASubscription implements Subscription {
         final String result = "Subscription ( "
             + "id = " + this.id + TO_STRING_SEPARATOR
             + "user = " + this.username + TO_STRING_SEPARATOR
-            + "mailbox = " + this.mailbox + TO_STRING_SEPARATOR
+            + "mailbox = " + this.mailboxNameValue + TO_STRING_SEPARATOR
             + " )";
         return result;
+    }
+
+    public void setMailboxNameCodec(MailboxNameCodec mailboxNameCodec) {
+        this.mailboxNameCodec = mailboxNameCodec;
+    }
+
+    public String getMailboxNameValue() {
+        return mailboxNameValue;
+    }
+
+    public void setMailboxNameValue(String mailboxNameValue) {
+        this.mailboxNameValue = mailboxNameValue;
     }
     
 }

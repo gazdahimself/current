@@ -25,8 +25,8 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 
 /**
- * A matcher for {@link StatusResponse} objects, whereby only their
- * serverResponseType field is significant. is significant.
+ * A matcher for {@link StatusResponse} objects for which only their
+ * serverResponseType field is significant.
  * 
  */
 public class StatusResponseTypeMatcher extends BaseMatcher<StatusResponse> {

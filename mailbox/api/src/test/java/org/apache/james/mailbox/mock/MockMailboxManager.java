@@ -28,7 +28,8 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -40,7 +41,11 @@ public class MockMailboxManager {
     /**
      * The mock mailbox manager constructed based on a provided mailboxmanager.
      */
-    private MailboxManager mockMailboxManager;
+    private final MailboxManager mockMailboxManager;
+    
+    private final boolean createVirtualUsers;
+    private final boolean createNonVirtualUsers;
+    private int mailboxCount = 0;
     
     /**
      * Number of Domains to be created in the Mailbox Manager.
@@ -52,23 +57,20 @@ public class MockMailboxManager {
      */
     public static final int USER_COUNT = 3;
     
+    private static final String USER_PREFIX = "user";
+    private static final String DOMAIN_PREFIX = "localhost";
+    
     /**
      * Number of Sub Mailboxes (mailbox in INBOX) to be created in the Mailbox Manager.
      */
     public static final int SUB_MAILBOXES_COUNT = 3;
-    
+    private static final String SUB_FOLDER_PREFIX = "SUB_FOLDER_";
+
     /**
      * Number of Sub Sub Mailboxes (mailbox in a mailbox under INBOX) to be created in the Mailbox Manager.
      */
     public static final int SUB_SUB_MAILBOXES_COUNT = 3;
-    
-    /**
-     * The expected Mailboxes count calculated based on the feeded mails.
-     */
-    public static final int EXPECTED_MAILBOXES_COUNT = DOMAIN_COUNT * 
-                     (USER_COUNT + // INBOX
-                      USER_COUNT * SUB_MAILBOXES_COUNT + // INBOX.SUB_FOLDER
-                      USER_COUNT * SUB_MAILBOXES_COUNT * SUB_SUB_MAILBOXES_COUNT);  // INBOX.SUB_FOLDER.SUBSUB_FOLDER
+    private static final String SUBSUB_FOLDER_PREFIX = "SUBSUB_FOLDER_";
     
     /**
      * Number of Messages per Mailbox to be created in the Mailbox Manager.
@@ -83,8 +85,10 @@ public class MockMailboxManager {
      * @throws UnsupportedEncodingException 
      * @throws MailboxException 
      */
-    public MockMailboxManager(MailboxManager mailboxManager) throws MailboxException, UnsupportedEncodingException {
+    public MockMailboxManager(MailboxManager mailboxManager, boolean createVirtualUsers, boolean createNonVirtualUsers ) throws MailboxException, UnsupportedEncodingException {
         this.mockMailboxManager = mailboxManager;
+        this.createVirtualUsers = createVirtualUsers;
+        this.createNonVirtualUsers = createNonVirtualUsers;
         feedMockMailboxManager();
     }
     
@@ -103,32 +107,28 @@ public class MockMailboxManager {
      * @throws UnsupportedEncodingException
      */
     private void feedMockMailboxManager() throws MailboxException, UnsupportedEncodingException {
-
-        MailboxPath mailboxPath = null;
         
-        for (int i=0; i < DOMAIN_COUNT; i++) {
+        if (createNonVirtualUsers) {
 
             for (int j=0; j < USER_COUNT; j++) {
                 
-                String user = "user" + j + "@localhost" + i;
+                String user = USER_PREFIX + j;
                 
-                String folderName = "INBOX";
 
                 MailboxSession mailboxSession = getMockMailboxManager().createSystemSession(user, LoggerFactory.getLogger("mailboxmanager-test"));
-                mailboxPath = new MailboxPath("#private", user, folderName);
-                createMailbox(mailboxSession, mailboxPath);
+                MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+                MailboxName inboxPath = nameResolver.getInbox(mailboxSession.getOwner());
+                createMailbox(mailboxSession, inboxPath);
                 
                 for (int k=0; k < SUB_MAILBOXES_COUNT; k++) {
                     
-                    String subFolderName = folderName + ".SUB_FOLDER_" + k;
-                    mailboxPath = new MailboxPath("#private", user, subFolderName);
-                    createMailbox(mailboxSession, mailboxPath);
+                    MailboxName subPath = inboxPath.child(SUB_FOLDER_PREFIX + k);
+                    createMailbox(mailboxSession, subPath);
                     
                     for (int l=0; l < SUB_SUB_MAILBOXES_COUNT; l++) {
 
-                        String subSubfolderName = subFolderName + ".SUBSUB_FOLDER_" + l;
-                        mailboxPath = new MailboxPath("#private", user, subSubfolderName);
-                        createMailbox(mailboxSession, mailboxPath);
+                        MailboxName subSubPath = subPath.child(SUBSUB_FOLDER_PREFIX + l);
+                        createMailbox(mailboxSession, subSubPath);
 
                     }
                         
@@ -137,9 +137,42 @@ public class MockMailboxManager {
                 getMockMailboxManager().logout(mailboxSession, true);
         
             }
-            
         }
         
+        if (createVirtualUsers) {
+
+            for (int i=0; i < DOMAIN_COUNT; i++) {
+
+                for (int j=0; j < USER_COUNT; j++) {
+                    
+                    String user = USER_PREFIX + j + "@"+ DOMAIN_PREFIX + i;
+                    
+
+                    MailboxSession mailboxSession = getMockMailboxManager().createSystemSession(user, LoggerFactory.getLogger("mailboxmanager-test"));
+                    MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+                    MailboxName inboxPath = nameResolver.getInbox(mailboxSession.getOwner());
+                    createMailbox(mailboxSession, inboxPath);
+                    
+                    for (int k=0; k < SUB_MAILBOXES_COUNT; k++) {
+                        
+                        MailboxName subPath = inboxPath.child(SUB_FOLDER_PREFIX + k);
+                        createMailbox(mailboxSession, subPath);
+                        
+                        for (int l=0; l < SUB_SUB_MAILBOXES_COUNT; l++) {
+
+                            MailboxName subSubPath = subPath.child(SUBSUB_FOLDER_PREFIX + l);
+                            createMailbox(mailboxSession, subSubPath);
+
+                        }
+                            
+                    }
+
+                    getMockMailboxManager().logout(mailboxSession, true);
+            
+                }
+                
+            }            
+        }
     }
     
     /**
@@ -148,9 +181,11 @@ public class MockMailboxManager {
      * @throws MailboxException
      * @throws UnsupportedEncodingException 
      */
-    private void createMailbox(MailboxSession mailboxSession, MailboxPath mailboxPath) throws MailboxException, UnsupportedEncodingException {
-        getMockMailboxManager().startProcessingRequest(mailboxSession);
-        getMockMailboxManager().createMailbox(mailboxPath, mailboxSession);
+    private void createMailbox(MailboxSession mailboxSession, MailboxName mailboxPath) throws MailboxException, UnsupportedEncodingException {
+        MailboxManager mailboxManager = getMockMailboxManager();
+        mailboxManager.startProcessingRequest(mailboxSession);
+        mailboxManager.createMailbox(mailboxPath, mailboxSession);
+        
         MessageManager messageManager = getMockMailboxManager().getMailbox(mailboxPath, mailboxSession);
         for (int j=0; j < MESSAGE_PER_MAILBOX_COUNT; j++) {
             messageManager.appendMessage(new ByteArrayInputStream(MockMail.MAIL_TEXT_PLAIN.getBytes("UTF-8")), 
@@ -160,6 +195,11 @@ public class MockMailboxManager {
                     new Flags(Flags.Flag.RECENT));
         }
         getMockMailboxManager().endProcessingRequest(mailboxSession);
+        mailboxCount++;
+    }
+
+    public int getMailboxCount() {
+        return mailboxCount;
     }
     
 }

@@ -20,9 +20,9 @@ package org.apache.james.mailbox.hbase.mail.model;
 
 import java.util.UUID;
 
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.SimpleMailboxACL;
+import org.apache.james.mailbox.name.MailboxName;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 /**
@@ -30,26 +30,29 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
  * implementations.
  * 
  */
+/**
+ * TODO HBaseMailbox.
+ */
 public class HBaseMailbox implements Mailbox<UUID> {
 
     private static final String TAB = " ";
     /** The value for the mailboxId field */
     private UUID mailboxId;
-    /** The value for the name field */
-    private String name;
     /** The value for the uidValidity field */
     private long uidValidity;
     private String user;
-    private String namespace;
     private long lastUid;
     private long highestModSeq;
     private long messageCount;
+    
+    private MailboxName mailboxName;
+    private boolean ownerGroup;
 
-    public HBaseMailbox(MailboxPath mailboxPath, long uidValidity) {
+    public HBaseMailbox(MailboxName mailboxPath, String user, boolean ownerGroup, long uidValidity) {
         super();
-        this.name = mailboxPath.getName();
-        this.user = mailboxPath.getUser();
-        this.namespace = mailboxPath.getNamespace();
+        this.mailboxName = mailboxPath;
+        this.user = user;
+        this.ownerGroup = ownerGroup;
         this.uidValidity = uidValidity;
         //TODO: this has to change to something that can guarantee that mailboxId is unique
         this.mailboxId = UUID.randomUUID();
@@ -66,27 +69,24 @@ public class HBaseMailbox implements Mailbox<UUID> {
     public void setMailboxId(UUID mailboxId) {
         this.mailboxId = mailboxId;
     }
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getNamespace()
-     */
-
-    @Override
-    public String getNamespace() {
-        return namespace;
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setNamespace(java.lang.String)
+    
+    /**
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getMailboxName()
      */
     @Override
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
+    public MailboxName getMailboxName() {
+        return mailboxName;
     }
 
-    /*
-     * (non-Javadoc)
+    /**
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setMailboxName(org.apache.james.mailbox.name.MailboxName)
+     */
+    @Override
+    public void setMailboxName(MailboxName mailboxName) {
+        this.mailboxName = mailboxName;
+    }
+
+    /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getUser()
      */
     @Override
@@ -94,29 +94,29 @@ public class HBaseMailbox implements Mailbox<UUID> {
         return user;
     }
 
-    /*
-     * (non-Javadoc)
+    /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#setUser(java.lang.String)
      */
     @Override
     public void setUser(String user) {
         this.user = user;
     }
-
+    
+    
     /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getName()
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#isOwnerGroup()
      */
     @Override
-    public String getName() {
-        return name;
+    public boolean isOwnerGroup() {
+        return ownerGroup;
     }
 
     /**
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setName(java.lang.String)
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setOwnerGroup(boolean)
      */
     @Override
-    public void setName(String name) {
-        this.name = name;
+    public void setOwnerGroup(boolean ownerGroup) {
+        this.ownerGroup = ownerGroup;
     }
 
     /**
@@ -132,7 +132,7 @@ public class HBaseMailbox implements Mailbox<UUID> {
         final String retValue = "Mailbox ( "
                 + "mailboxId = " + this.mailboxId + TAB
 //                + "namespace = " + this.namespace + TAB
-                + "name = " + this.name + TAB
+                + "mailboxName = " + this.mailboxName + TAB
 //                + "user = " + this.user + TAB
                 + "uidValidity = " + this.uidValidity + TAB
                 + " )";

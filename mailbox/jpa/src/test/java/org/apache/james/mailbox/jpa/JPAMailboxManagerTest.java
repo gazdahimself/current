@@ -25,6 +25,7 @@ import javax.persistence.EntityManagerFactory;
 import org.apache.james.mailbox.AbstractMailboxManagerTest;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACLCodec;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
@@ -39,6 +40,7 @@ import org.apache.james.mailbox.jpa.mail.model.openjpa.AbstractJPAMessage;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMessage;
 import org.apache.james.mailbox.jpa.openjpa.OpenJPAMailboxManager;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
+import org.apache.james.mailbox.name.codec.MailboxNameCodec;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.openjpa.persistence.OpenJPAPersistence;
 import org.junit.After;
@@ -98,10 +100,11 @@ public class JPAMailboxManagerTest extends AbstractMailboxManagerTest {
                 JPAProperty.class.getName() + ";" +
                 JPAUserFlag.class.getName() + ";" +
                 JPASubscription.class.getName() + ")");
+        //properties.put("openjpa.RuntimeUnenhancedClasses", "warn");
        
         entityManagerFactory = OpenJPAPersistence.getEntityManagerFactory(properties);
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
-        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory));
+        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory), MailboxNameCodec.SAFE_STORE_NAME_CODEC, MailboxACLCodec.DEFAULT);
 
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();

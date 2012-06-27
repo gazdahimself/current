@@ -33,15 +33,18 @@ import org.apache.james.imap.message.request.SetACLRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.acl.MailboxACL;
+import org.apache.james.mailbox.acl.MailboxACL.EditMode;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLEntryKey;
+import org.apache.james.mailbox.acl.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.acl.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.mailbox.name.MailboxNameResolver;
+import org.apache.james.mailbox.name.MailboxName;
+import org.apache.james.mailbox.name.UnresolvedMailboxName;
 import org.slf4j.Logger;
 
 /**
@@ -58,17 +61,19 @@ public class SetACLProcessor extends AbstractMailboxProcessor<SetACLRequest> imp
     }
 
     @Override
-    protected void doProcess(SetACLRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
+    protected void doProcess(SetACLRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
 
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final String mailboxName = message.getMailboxName();
-        final String identifier = message.getIdentifier();
+        final MailboxNameResolver nameResolver = mailboxSession.getMailboxNameResolver();
+        final UnresolvedMailboxName mailboxName = request.getMailboxName();
+        final MailboxName mailboxPath = nameResolver.resolve(mailboxName , mailboxSession.getUser().getUserName());
+        final String identifier = request.getIdentifier();
         try {
             
             /* parsing the rights is the the cheapest thing to begin with */
             EditMode editMode = MailboxACL.EditMode.REPLACE;
-            String rights = message.getRights();
+            String rights = request.getRights();
             if (rights != null && rights.length() > 0) {
                 switch (rights.charAt(0)) {
                 case MailboxACL.ADD_RIGHTS_MARKER:
@@ -83,7 +88,7 @@ public class SetACLProcessor extends AbstractMailboxProcessor<SetACLRequest> imp
             }
             MailboxACLRights mailboxAclRights = new Rfc4314Rights(rights);
 
-            MessageManager messageManager = mailboxManager.getMailbox(buildFullPath(session, mailboxName), mailboxSession);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
 
             /*
              * RFC 4314 section 6.

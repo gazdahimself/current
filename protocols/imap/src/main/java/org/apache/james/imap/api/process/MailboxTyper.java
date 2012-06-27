@@ -18,7 +18,7 @@
  ****************************************************************/
 package org.apache.james.imap.api.process;
 
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.name.MailboxName;
 
 /**
  * 
@@ -35,5 +35,5 @@ public interface MailboxTyper {
      * @return MailboxType value for passed mailbox, if there's no special
      *         function for particular mailbox, return OTHER.
      */
-    MailboxType getMailboxType(ImapSession session, MailboxPath path);
+    MailboxType getMailboxType(ImapSession session, MailboxName path);
 }
