@@ -1,0 +1,474 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.    
+-->
+<document>
+
+  <properties>
+    <title>Overview</title>
+    <author email="site-dev@james.apache.org">James Project Web Team</author>
+  </properties>
+  
+  <head>
+
+    <style type="text/css">
+      #newsbox {margin: 0 0 0 0;}
+      #james-logo-slideshow {height:200px; width:500px;}
+    </style>
+
+<!-- 
+    <script type="text/javascript" src="js/galleria/galleria.js"></script>
+-->
+    <script type="text/javascript" src="js/james/index.js?v=2"></script>
+    
+    <script type="text/javascript" src="js/james/functions.js"></script>
+    
+  </head>
+
+  <body>
+  
+  <table><tr><td>
+
+    <div id="tabs" style="min-width:550px;">
+    
+      <ul>
+        <li><a href="#tabs-1">Project</a></li>
+        <li><a href="#tabs-2">Server Pack</a></li>
+        <li><a href="#tabs-3">Components</a></li>
+        <li><a href="#tabs-4">Call for Logo</a></li>
+        <!--  Video tab is temporary desactivated, seems to be not displayed -->
+<!--        <li><a href="#tabs-5">Video</a></li>-->
+      </ul>
+
+      <div id="tabs-1">
+      
+       <div class="ui-widget">
+			<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+				<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+				<strong>Hey!</strong> 
+				 Apache James Server 3.0-beta4 is out! <b>Thank you to everyone</b> who contributed code, 
+	             documentation, bug report, feedback...
+				</p>
+			</div>
+		</div>
+
+        <p>The Apache James Project delivers a rich set of open source modules and libraries, written in Java, 
+           related to Internet mail communication which build into an advanced enterprise mail server.</p>
+           
+          <p>All are welcome to the Community!  We recommend that Users, Developers, Curious and Fans subscribe to the 
+             <a href='http://james.apache.org/mail.html'>mailing lists</a> and 
+             follow <a href="http://twitter.com/ApacheJames">@ApacheJames</a> on Twitter.</p>
+             
+          <p>You can also read the <a href="http://wiki.apache.org/james/">wiki</a> 
+             (discover <a href="http://wiki.apache.org/james/JamesUsers">who uses James</a>,...)</p>
+        
+          <p>Just like other <a href='http://projects.apache.org'>Apache projects</a>, Apache James is developed in an
+             <a href='http://www.apache.org/foundation/how-it-works.html#meritocracy'>open</a> and 
+             <a href='http://www.apache.org/foundation/how-it-works.html#management'>collaborative manner</a>.</p>
+           
+        <p>
+          <span class="minibutton btn-download">
+            <a href="http://james.apache.org/download.cgi#Apache_James_Server">
+              <span><span class="icon"></span>Download Early James Server 3.0-beta4</span>
+            </a>
+          </span>
+        </p>
+        <p>
+          <span class="minibutton btn-download">
+            <a href="http://james.apache.org/download.cgi#Apache_James_2.3.2_is_the_stable_version">
+              <span><span class="icon"></span>Download Stable James Server 2.3.2</span>
+            </a>
+          </span>
+        </p>
+        
+        <p>
+          <div id="display-call-for-logo-tab">
+            <img src="images/james-logo-square.png"/>
+            <b>Help use design and choose a new logo for James<br/>
+            <a href="#">Click here to test the logo proposals on this web site</a></b>
+          </div>
+        </p>
+<!--
+          <p>
+            <div id="james-logo-slideshow">
+              <img src="logo-call/james-logo-1.png"/>
+              <img src="logo-call/james-logo-2.png"/>
+              <img src="logo-call/james-logo-3.png"/>
+              <img src="logo-call/james-logo-4.png"/>
+              <img src="logo-call/james-logo-5.png"/>
+              <img src="logo-call/james-logo-6.png"/>
+              <img src="logo-call/james-logo-7.png"/>
+            </div>
+          </p>
+-->
+      </div>
+      
+      <div id="tabs-2">
+          
+          <subsection name="James Packaged as a Server">
+    
+            <p><a href='http://james.apache.org/server'>Apache James Server</a> 3.0 and 2.3.2 are integrated email server with advanced fully functional features.</p>
+               
+            <p>Apache James Server 3.0 provides a mailet container, delegating to independent processing agents known as mailets.
+               It benefits from modular architecture, is built on Spring and is moving towards OSGi.
+               It supports the following protocols:</p>
+           
+                <ul>
+                  <li><a href='http://james.apache.org/server/rfclist/smtp/rfc0821.txt'>
+                     <abbr title='Simple Mail Transport Protocol'>SMTP</abbr></a></li>
+                  <li><a href='http://james.apache.org/server/rfclist/lmtp/rfc2033.txt'>
+                      <abbr title='Local Mail Transfer Protocol'>LMTP</abbr></a>.</li>
+                  <li><a href='http://james.apache.org/server/rfclist/nntp/rfc0977.txt'>
+                     <abbr title='Post Office Protocol'>POP3</abbr></a></li>
+                  <li><a href='http://james.apache.org/server/rfclist/imap4/rfc2060.txt'>
+                     <abbr title='Internet Message Access Protocol'>IMAP</abbr></a> 
+                     (see <a href='http://james.apache.org/imap'>Apache James IMAP</a> project).</li>
+                  <li>Sieve filtering into mailboxes for incoming mail (see <a href="http://james.apache.org/jsieve/index.html">Apache James jSieve</a> project).</li>
+                  <li>Fetchmail from POP3 and IMAP accounts.</li>
+                  <li><a href='http://james.apache.org/server/rfclist/nntp/rfc0977.txt'>
+                      <abbr title='Network News Transfer Protocol'>NNTP</abbr></a> (better known as news, only with Server V2).</li>
+               </ul>
+      
+            <p>You can also try the <a href='http://james.apache.org/hupa/'>Apache James Hupa</a> WEB-mail solution to give access
+               from any browser to IMAP mailboxes (hosted by James Server or any other IMAP Server).</p>
+               
+           </subsection>
+
+          </div>            
+
+          <div id="tabs-3">
+          
+          <subsection name="Apache James Software Components">
+
+            <p>Developers looking for a modular mail platform on which to build can look 
+               at the modules and libraries used to compose James Server 3.0.</p>
+      
+            <p><a href='http://james.apache.org/imap/'>Apache James IMAP</a> provides a flexible codec for IMAP, 
+               command processors and a sample data access layer. In combination with a socket layer, 
+               and a mailbox persistence, this library can be used to create an IMAP server.</p>
+        
+            <p>The <a href='http://james.apache.org/mailets/'>Apache James Mailet project</a> collects products
+               related to mailets (mail processing components analogous to servlets). These are independent of the 
+                <a href='http://james.apache.org/server/'>James server</a> and can be reused in any mailet container.</p>
+            
+            <ul>
+              <li>The <a href='http://james.apache.org/mailet/api'>Apache James Mailet API</a> specifies mailets.</li>
+              <li>The <a href='http://james.apache.org/mailet/base'>Apache James Mailet Basic Toolkit.</a>
+                  collects utilities and lightweight frameworks useful to develop and test mailets.</li>
+              <li><a href='http://james.apache.org/mailet/standard'>Apache James Standard Mailets</a> collects
+                  general processing mailets with limited dependencies.</li>
+              <li><a href='http://james.apache.org/mailet/crypto'>Apache James Crypto Mailets</a> collects
+                  mailets which perform cryptographic processing such as signing, encrypting,
+                  decrypting and signature verification.</li>
+            </ul>
+      
+            <p><a href='http://james.apache.org/protocols/'>Apache James Protocols</a> project delivers a lightweight, 
+               and highly extensible framework for mail protocols implementations.</p>
+        
+            <p><a href='http://james.apache.org/mailbox/'>Apache James Mailbox</a> is a flexible Mailbox storage 
+               accessible by mail (imap, pop3, smtp,...) and other protocols..</p>
+        
+            <p><a href='http://james.apache.org/mime4j/'>Apache James Mime4J</a> parses MIME typed documents (including 
+                - but not limited to - mail). APIs similar to DOM, SAX and pull parsers are exposed.</p>
+      
+            <p><a href='http://james.apache.org/jspf/'>Apache James jSPF</a> implements <abbr title='Sender Policy Framework'>
+               <a href='http://www.openspf.org/'>SPF</a></abbr></p>
+      
+            <p><a href='http://james.apache.org/jsieve'>Apache James jSieve</a> implements the 
+                <a href='http://www.ietf.org/rfc/rfc3028.txt'>Sieve</a> mail filtering language</p>
+      
+            <p><a href='http://james.apache.org/jdkim/'>Apache James jDKIM</a> implements <abbr title='Domain Keys Identified Mail'>
+               <a href='http://www.dkim.org/'>DKIM</a></abbr></p>
+      
+            <p><a href='http://james.apache.org/mpt/'>Apache James MPT</a> is a scripted functional test tool
+                suitable for testing mail protocols.</p>
+        
+            <p><a href='http://james.apache.org/postage/'>Apache James  Postage</a> generates mail traffic suitable
+                for stress testing mail servers</p>
+                
+           </subsection>
+          
+        </div>
+
+        <div id="tabs-4">
+        
+          <subsection name="Why a new Logo?">
+          
+            <p>We are happy with our current logo, but for the 
+               upcoming James Server 3.0 release, we would like to 
+               give our community the opportunity to create a new image for James.</p>
+               
+            <p>Don't be shy, take your inkscape and gimp, and send us on 
+               the <a href="mail.html">James Server User mailing list</a> 
+               your creations. We will publish them on this page.</p>
+            
+            <p>We need an horizontal logo (100p height) to be show displayed on the upper
+               left corner of this page, an avatar (48x48p) to be used on a Twitter stream for example.
+               The used fonts should be redistributable (or commonly available on Windows and Linux).
+               The chosen logo should be delivered in SVG format. 
+               We also like the <a href="http://www.apache.org/foundation/press/kit/">Apache feather</a>.</p>
+          
+          </subsection>
+        
+          <subsection name="How to Choose?">
+          
+            <p>Listen <a href="http://james.apache.org/mail.html">mailing list</a> 
+               and <a href="http://twitter.com/ApacheJames">Twitter</a> for the vote.</p>
+               
+            <p>We still don't have any date for this vote, so it's still time to submit your proposals.</p>
+            
+          </subsection>
+          
+          <subsection name="Preview a Logo on this Web Site">
+          
+            <div id="james-logo-0-preview">
+              <p><img src="images/james-logo-square.png"/></p>
+              <p>
+                <a href="#">Click to reset the upper left logo.</a>
+              </p>
+            </div>
+
+          </subsection>
+
+          <subsection name="Proposal 1">
+            <div id="james-logo-1-preview">
+              <p><img src="logo-call/james-logo-1.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+          <subsection name="Proposal 2">
+            <div id="james-logo-2-preview">
+              <p><img src="logo-call/james-logo-2.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+          <subsection name="Proposal 3">
+            <div id="james-logo-3-preview">
+              <p><img src="logo-call/james-logo-3.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+          <subsection name="Proposal 4">
+            <div id="james-logo-4-preview">
+              <p><img src="logo-call/james-logo-4.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+          <subsection name="Proposal 5">
+            <div id="james-logo-5-preview">
+              <p><img src="logo-call/james-logo-5.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+            <p><img src="logo-call/james-logo-5-avatar.png"/></p>
+          </subsection>
+
+          <subsection name="Proposal 6">
+            <div id="james-logo-6-preview">
+              <p><img src="logo-call/james-logo-6.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+            <p><img src="logo-call/james-logo-6-avatar.png"/></p>
+          </subsection>
+
+          <subsection name="Proposal 7">
+            <div id="james-logo-7-preview">
+              <p><img src="logo-call/james-logo-7.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+          <subsection name="Proposal 8">
+            <div id="james-logo-8-preview">
+              <p><img src="logo-call/james-logo-8.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+            <p><img src="logo-call/james-logo-8-avatar.png"/></p>
+          </subsection>
+
+          <subsection name="Proposal 9">
+            <div id="james-logo-9-preview">
+              <p><img src="logo-call/james-logo-9.png"/></p>
+              <p>
+                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
+              </p>
+            </div>
+          </subsection>
+
+        </div>
+
+<!-- 
+        <div id="tabs-5">
+  
+              <object width="480" height="385">
+                <param name="movie" value="http://www.youtube.com/v/0Mx7qy7i3Hs?fs=1&amp;hl=en_US"></param>
+                <param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param>
+                <embed src="http://www.youtube.com/v/0Mx7qy7i3Hs?fs=1&amp;hl=en_US" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="480" height="385">
+                </embed>
+              </object>
+  
+        </div>
+-->
+      </div>
+        
+   </td>
+   <td>
+
+  <div id="newsboxspacer">
+
+     <div id="newsbox">
+
+      <script src="http://widgets.twimg.com/j/2/widget.js"></script>
+      <script>
+      new TWTR.Widget({
+        version: 2,
+        type: 'search',
+        search: 'from:ApacheJames OR #ApacheJames OR @ApacheJames',
+        interval: 6000,
+        title: 'Apache James Conversations',
+        subject: '',
+        width: 250,
+        height: 300,
+        theme: {
+          shell: {
+            background: '#525D76',
+            color: '#ffffff'
+          },
+          tweets: {
+            background: '#ffffff',
+            color: '#444444',
+            links: '#1985b5'
+          }
+        },
+        features: {
+          scrollbar: false,
+          loop: true,
+          live: true,
+          hashtags: true,
+          timestamp: true,
+          avatars: true,
+          toptweets: true,
+          behavior: 'default'
+        }
+      }).render().start();
+      </script>
+
+      <subsection name="News">
+        <ul>
+          <li>Jun/2012 - <ul>
+          <li><a href="newsarchive.html#120607"><strong>Apache James Hupa 0.0.2</strong> released</a></li>
+          </ul>
+          </li>
+          <li>April/2012 - <ul>
+          <li><a href="newsarchive.html#120417"><strong>Apache James Server 3.0-beta4</strong> released</a></li>
+          </ul>
+          </li>
+          <li>January/2012 - <ul>
+          <li><a href="newsarchive.html#120123"><strong>Apache James Protocols 1.6.1</strong> released</a></li>
+          </ul>
+          </li>
+          <li>January/2012 - <ul>
+          <li><a href="newsarchive.html#120118"><strong>Apache James Protocols 1.6.0</strong> released</a></li>
+          </ul>
+          </li>
+          <li>January/2012 - <ul>
+          <li><a href="newsarchive.html#120104"><strong>Apache James Mime4j 0.7.2</strong> released</a></li>
+          </ul>
+          </li>
+          <li>December/2011 - <ul>
+          <li><a href="newsarchive.html#111230"><strong>Apache James Protocols 1.6.0-RC1</strong> released</a></li>
+          </ul>
+          </li>
+          <li>November/2011 - <ul>
+          <li><a href="newsarchive.html#111101"><strong>Apache James jSPF 1.0.0</strong> released</a></li>
+          </ul>
+          </li>
+          <li>October/2011 - <ul>
+          <li><a href="newsarchive.html#111711"><strong>Apache James Mime4j 0.7.1</strong> released</a></li>
+          </ul>
+          </li>
+          <li>October/2011 - <ul>
+          <li><a href="newsarchive.html#111611"><strong>Apache James Protocols 1.6-beta1</strong> released</a></li>
+          </ul>
+          </li>
+          <li>Augustus/2011 - <ul>
+          <li><a href="newsarchive.html#082011"><strong>Apache James Server 3.0-beta3</strong> released</a></li>
+          </ul>
+          </li>
+          <li>July/2011 - <ul>
+          <li><a href="newsarchive.html#30072011"><strong>Apache James jDKIM 0.2</strong> released</a></li>
+          </ul>
+          </li>
+          <li>July/2011 - <ul>
+          <li><a href="newsarchive.html#25072011"><strong>Apache James Mime4J 0.7</strong> released</a></li>
+          </ul>
+          </li>
+          <li>July/2011 - <ul>
+          <li><a href="newsarchive.html#10072011"><strong>Apache James jSPF 0.9.9</strong> released</a></li>
+          </ul>
+          </li>
+          <li>June/2011 - <ul>
+          <li><a href="newsarchive.html#29062011"><strong>Apache James Protocols 1.5</strong> released</a></li>
+          </ul>
+          </li>
+          <li>May/2011 - <ul>
+          <li><a href="newsarchive.html#15052011"><strong>Apache James IMAP 0.2 and Mailbox 0.2</strong> released</a></li>
+          </ul>
+          </li>
+          <li>Dec/2010 - <ul>
+          <li><a href="newsarchive.html#06122010_1"><strong>Apache James Protocols 1.2</strong> released</a></li>
+          </ul>
+          </li>
+          <li>Nov/2010 - <ul>
+          <li><a href="newsarchive.html#06112010_1"><strong>Apache James Server 3.0-M2</strong> released</a></li>
+          </ul>
+          </li>
+        </ul>
+        <i>Read all the news in full in the <a href="newsarchive.html">News Archive</a></i><br/>
+      </subsection>
+  
+      <br/>
+      <iframe src="http://www.apache.org/ads/bannerbar.html" style="border-width:0;" frameborder="0" scrolling="no" width="250" height="150"></iframe>
+      </div>
+     
+   </div>
+   
+   </td></tr></table>
+   
+     </body>
+
+</document>

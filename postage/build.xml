@@ -1,0 +1,195 @@
+<project name="James Postage" default="build" basedir=".">
+
+<!--
+ ! Licensed to the Apache Software Foundation (ASF) under one   !
+ ! or more contributor license agreements.  See the NOTICE file !
+ ! distributed with this work for additional information        !
+ ! regarding copyright ownership.  The ASF licenses this file   !
+ ! to you under the Apache License, Version 2.0 (the            !
+ ! "License"); you may not use this file except in compliance   !
+ ! with the License.  You may obtain a copy of the License at   !
+ !                                                              !
+ !   http://www.apache.org/licenses/LICENSE-2.0                 !
+ !                                                              !
+ ! Unless required by applicable law or agreed to in writing,   !
+ ! software distributed under the License is distributed on an  !
+ ! "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       !
+ ! KIND, either express or implied.  See the License for the    !
+ ! specific language governing permissions and limitations      !
+ ! under the License.                                           !
+ -->  
+
+    <description>James Postage Testing Tool</description>
+
+    <!--  CONFIGURE -->
+    
+    <!--<property file="build.properties" /> -->
+    
+    <property name="dir.build" value="${basedir}/target"/>
+    <property name="dir.build.classes" value="${dir.build}/classes/"/>
+    <property name="dir.build.lib" value="${dir.build}/lib/"/>
+    
+    <property name="dir.source.classes" value="${basedir}/src/main/java/"/>
+	
+	  <property name="dir.stage" value="${basedir}/stage"/>
+    
+    <target name="initialize">
+        <tstamp/>
+        
+        <path id="java.build.classpath">
+            <fileset dir="${dir.stage}">
+              <!-- BUILDTIME AND RUNTIME -->
+              <include name="commons-collections/jars/commons-collections-3.1.jar"/>
+              <include name="commons-configuration/jars/commons-configuration-1.5.jar"/>
+              <include name="commons-lang/jars/commons-lang-2.3.jar"/>
+              <include name="commons-logging/jars/commons-logging-1.1.jar"/>
+              <include name="commons-net/jars/commons-net-1.4.1.jar"/>
+              <include name="javax.mail/jars/mail-1.4.1.jar"/>
+              <include name="javax.activation/jars/activation-1.1.1.jar"/>
+            	<include name="org.apache.avalon.cornerstone.sockets/jars/cornerstone-sockets-api-2.2.2.jar" />
+            	<include name="org.apache.avalon.cornerstone.sockets/jars/cornerstone-sockets-impl-2.2.2.jar" />
+            	<include name="org.apache.avalon.cornerstone.threads/jars/cornerstone-threads-api-2.2.2.jar" />
+            	<include name="org.apache.avalon.cornerstone.connection/jars/cornerstone-connection-impl-2.2.2.jar" />
+              <include name="org.apache.avalon.framework/jars/avalon-framework-api-4.3.1.jar"/>
+              <include name="org.apache.avalon.framework/jars/avalon-framework-impl-4.3.1.jar"/>
+            	<include name="org.apache.excalibur.components/jars/excalibur-thread-impl-2.2.1.jar" />
+            	<include name="org.apache.excalibur.components/jars/excalibur-thread-api-2.2.1.jar" />
+            	<include name="org.apache.excalibur.components/jars/excalibur-pool-api-2.2.1.jar" />
+              <include name="org.apache.james/jars/mailet-2.4-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-domain-api-3.0-SNAPSHOT.jar"/>
+            	<include name="org.apache.james/jars/james-server-core-api-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-avalon-socket-library-3.0-SNAPSHOT.jar"/>
+            	<include name="org.apache.james/jars/james-server-core-function-3.0-SNAPSHOT.jar"/>
+            	<include name="org.apache.james/jars/james-server-common-util-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-smtpserver-function-3.0-SNAPSHOT.jar"/>
+              <!-- BUILD TIME ONLY -->
+            </fileset>
+        </path>
+
+        <path id="java.run.classpath">
+            <fileset dir="${dir.build.lib}">
+                <include name="postage.jar"/>
+            </fileset>
+            <fileset dir="${dir.stage}">
+              <!-- BUILDTIME AND RUNTIME -->
+              <include name="commons-collections/jars/commons-collections-3.1.jar"/>
+              <include name="commons-configuration/jars/commons-configuration-1.5.jar"/>
+              <include name="commons-lang/jars/commons-lang-2.3.jar"/>
+              <include name="commons-logging/jars/commons-logging-1.1.jar"/>
+              <include name="commons-net/jars/commons-net-1.4.1.jar"/>
+              <include name="javax.mail/jars/mail-1.4.1.jar"/>
+              <include name="javax.activation/jars/activation-1.1.1.jar"/>
+              <include name="org.apache.avalon.cornerstone.sockets/jars/cornerstone-sockets-api-2.2.2.jar" />
+              <include name="org.apache.avalon.cornerstone.sockets/jars/cornerstone-sockets-impl-2.2.2.jar" />
+              <include name="org.apache.avalon.cornerstone.threads/jars/cornerstone-threads-api-2.2.2.jar" />
+              <include name="org.apache.avalon.cornerstone.connection/jars/cornerstone-connection-impl-2.2.2.jar" />
+              <include name="org.apache.avalon.framework/jars/avalon-framework-api-4.3.1.jar"/>
+              <include name="org.apache.avalon.framework/jars/avalon-framework-impl-4.3.1.jar"/>
+              <include name="org.apache.excalibur.components/jars/excalibur-thread-api-2.2.1.jar" />
+              <include name="org.apache.excalibur.components/jars/excalibur-thread-impl-2.2.1.jar" />
+              <include name="org.apache.excalibur.components/jars/excalibur-pool-api-2.2.1.jar" />
+              <include name="org.apache.james/jars/mailet-2.4-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-domain-api-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-core-api-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-avalon-socket-library-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-core-function-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-common-util-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-smtpserver-function-3.0-SNAPSHOT.jar"/>
+              <!-- RUNTIME ONLY -->
+              <include name="concurrent/jars/concurrent-1.3.4.jar" />
+              <include name="org.apache.excalibur.components/jars/excalibur-pool-impl-2.2.1.jar" />
+              <include name="org.apache.james/jars/apache-james-mailet-base-1.0-SNAPSHOT.jar"/>
+              <include name="org.apache.james/jars/james-server-core-library-3.0-SNAPSHOT.jar"/>
+              <include name="org.apache.avalon.cornerstone.connection/jars/cornerstone-connection-api-2.2.2.jar" />
+              <include name="dnsjava/jars/dnsjava-2.0.6.jar" />
+            </fileset>
+        </path>
+
+    </target>
+
+    <target name="init-compiler-sources">
+        <fixcrlf srcdir="${dir.source.classes}" includes="**/*.java" eol="lf" tab="remove" tablength="4" />
+    </target>
+        
+    <!--  CLEAN UP -->
+    
+    <target name="clean" depends="initialize" >
+        <delete dir="${dir.build}" />
+    </target>
+
+    
+    <!--  COMPILE -->
+    
+    <target name="init-paths">
+        <mkdir dir="${dir.build}"/>
+        <mkdir dir="${dir.build.classes}"/>
+    </target>
+        
+    <target name="build" depends="initialize, init-paths, init-compiler-sources">
+        <echo>Compiling ${ant.project.name}</echo>
+                
+        <!-- build the src javas -->
+        <javac destdir="${dir.build.classes}"
+            classpathref="java.build.classpath"
+            target="1.5" source="1.5"
+            debug="on" >
+            <src path="${dir.source.classes}" /> 
+        </javac>
+		
+        <echo>Finished compiling ${ant.project.name}</echo>
+    </target>
+    
+    <!--  PACKAGE -->
+    
+    <target name="package" depends="build" >
+        <mkdir dir="${dir.build}"/>
+        <mkdir dir="${dir.build.lib}"/>
+        
+        <jar file="${dir.build.lib}/postage.jar" basedir="${dir.build.classes}" >
+            <manifest >
+              <attribute name="Built-By" value="${user.name}"/>
+              <attribute name="Main-Class" value="org.apache.james.postage.Main"/>
+              <section name="common">
+                <attribute name="Specification-Title" value="Apache James Postage"/>
+                <attribute name="Specification-Version" value="0.1"/>
+                <attribute name="Specification-Vendor" value="Apache Software Foundation"/>
+                <attribute name="Implementation-Title" value="Postage"/>
+                <attribute name="Implementation-Version" value="0.1"/> 
+                <attribute name="Implementation-Vendor" value="Apache Software Foundation"/>
+              </section>
+            </manifest>
+        </jar>
+        <!-- TODO add Apache Manifest Info -->
+        <tstamp>
+            <format property="end.time" pattern="HH:mm:ss"/>
+        </tstamp> 
+        <echo>Finished: ${end.time}</echo>
+    </target>
+
+    <!--  RUN -->
+    
+    <target name="run" depends="initialize, package" >
+        <java classname="org.apache.james.postage.Main" fork="true">
+            <classpath refid="java.run.classpath"/>
+            
+            <!-- TODO: document, in which runtime environments this property is needed for loading XML conf files -->
+            <!-- <sysproperty key="javax.xml.parsers.DocumentBuilderFactory" value="org.apache.crimson.jaxp.DocumentBuilderFactoryImpl" /> -->
+            
+            <arg value="./src/main/config/postage.xml" />
+            <arg value="release" />
+        </java>
+    </target>
+
+    <target name="run-debug" depends="initialize" >
+        <java classname="org.apache.james.postage.Main" fork="true">
+            <classpath refid="java.run.classpath"/>
+
+            <!-- TODO: document, in which runtime environments this property is needed for loading XML conf files -->
+            <!-- <sysproperty key="javax.xml.parsers.DocumentBuilderFactory" value="org.apache.crimson.jaxp.DocumentBuilderFactoryImpl" />  -->
+
+            <arg value="./src/main/config/postage.xml" />
+            <arg value="debug" />
+        </java>
+    </target>
+
+</project>

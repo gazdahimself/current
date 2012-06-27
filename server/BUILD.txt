@@ -1,0 +1,15 @@
+################## GENERAL BUILDING NOTES ############
+# See also http://james.apache.org/server/3/dev.html #
+######################################################
+
+The primary build tool for James server is maven 3 (3.0.2 is required).
+
+On a new source checkout from https://svn.apache.org/repos/asf/james/ start by running
+$ mvn clean package
+
+This will compiled all modules and build the distribution.
+The distribution binary and source build can be found under "container-spring/target" 
+and should contain everything you need to start with.
+
+For just building without running junit tests:
+$ mvn clean package -DskipTests=true

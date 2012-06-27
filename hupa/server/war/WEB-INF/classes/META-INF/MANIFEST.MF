@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Built-By: ppalaga
+Build-Jdk: 1.6.0_24
+Specification-Title: Apache James Hupa Server
+Specification-Version: 0.0.3-SNAPSHOT
+Specification-Vendor: The Apache Software Foundation
+Implementation-Title: Apache James Hupa Server
+Implementation-Version: 0.0.3-SNAPSHOT
+Implementation-Vendor-Id: org.apache.james.hupa
+Implementation-Vendor: The Apache Software Foundation
+Created-By: Maven Integration for Eclipse
+

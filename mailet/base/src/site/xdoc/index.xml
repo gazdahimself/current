@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.    
+-->
+<document>
+  <properties>
+    <title>Overview</title>
+    <author email="server-dev@james.apache.org">JAMES Project Team</author>
+  </properties>
+  <body>
+    <section name="Basic Mailet Toolkit">
+      	<p>
+A toolkit for builders of mailets and matchers with minimal dependencies.
+		</p>
+<p><a href='http://james.apache.org/mailet/base'>Apache James Mailets Base</a> 
+collects a number of utilites and lightweight frameworks useful when working 
+with the <a href='http://james.apache.org/mailet'>Apache Mailet API</a> (a framework
+assisting the rapid development of email processing functionality). 
+Mailets base is used as the basis for the email processing functions shipped 
+with the <a href='http://james.apache.org/server'>Apache James</a> server 
+but is not dependent on that server.</p>
+        <subsection name='Releases'>
+          <p>
+          Apache Mailet Base 1.0 is available to 
+          <a href='http://james.apache.org/download.cgi#Apache%20Mailet%20Base'>download</a>. This is the first
+          independent release of this code base which was previously shipped as part of 
+          <a href='http://james.apache.org/server'>Apache James Server</a>. It should therefore be considered 
+          mature.
+          </p>
+        </subsection>
+    </section>
+    <section name='Catalog'>
+        <p>For more information see the <a href='apidocs/index.html'>javadocs</a>.</p>
+    </section>
+  </body>
+</document>

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache.james</groupId>
+        <artifactId>james-project</artifactId>
+        <version>1.8</version>
+        <relativePath></relativePath>
+    </parent>
+
+    <artifactId>maven-mailetdocs-plugin</artifactId>
+    <version>0.2-SNAPSHOT</version>
+    <packaging>maven-plugin</packaging>
+
+    <name>Mailetdocs Maven Plugin</name>
+    <description>
+    This plugin generates documentation for Mailets by collating
+    information available from implementation source.
+    </description>
+    <url>http://james.apache.org/mailet/maven-mailetdocs-plugin/</url>
+    <inceptionYear>2008</inceptionYear>
+
+    <scm>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/james/mailet/maven-mailetdocs-plugin/trunk</connection>
+        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/mailet/maven-mailetdocs-plugin/trunk</developerConnection>
+        <url>http://svn.apache.org/viewcvs.cgi/james/mailet/maven-mailetdocs-plugin/trunk/?root=Apache-SVN</url>
+    </scm>
+    <issueManagement>
+        <system>JIRA</system>
+        <url>http://issues.apache.org/jira/browse/MAILETDOCS</url>
+    </issueManagement>
+
+    <distributionManagement>
+        <site>
+            <id>mailetdocs-website</id>
+            <url>scpexe://people.apache.org/www/james.apache.org/mailet/maven-mailetdocs-plugin/</url>
+        </site>
+    </distributionManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.maven.artifact</groupId>
+            <artifactId>maven-artifact</artifactId>
+            <version>3.0-alpha-1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.reporting</groupId>
+            <artifactId>maven-reporting-impl</artifactId>
+            <version>2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.reporting</groupId>
+            <artifactId>maven-reporting-api</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>apache-mailet</artifactId>
+            <version>2.5-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.qdox</groupId>
+            <artifactId>qdox</artifactId>
+            <version>1.12</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <!-- needed for javamail -->
+        <repository>
+            <id>maven2-repository.dev.java.net</id>
+            <name>Java.net Repository for Maven</name>
+            <url>http://download.java.net/maven/2/</url>
+            <layout>default</layout>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generated-helpmojo</id>
+                        <goals>
+                            <goal>helpmojo</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Add NOTICE and LICENSE to generated JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <configuration>
+                            <resourceBundles>
+                                <resourceBundle>
+                                    org.apache:apache-jar-resource-bundle:1.4
+                                </resourceBundle>
+                            </resourceBundles>
+                            <properties>
+                                <addLicense>true</addLicense>
+                            </properties>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-doap-plugin</artifactId>
+                <executions>
+                <execution>
+                <id>site</id>
+                <phase>site</phase>
+                <goals>
+                <goal>generate</goal>
+                </goals>
+                </execution>
+                </executions>
+                <configuration>
+                <doapOptions>
+                <programmingLanguage>java</programmingLanguage>
+                <category>mail</category>
+                <download-page>http://james.apache.org/download.cgi</download-page>
+                </doapOptions>
+                <asfExtOptions>
+                <included>true</included>
+                <pmc>http://james.apache.org</pmc>
+                <name>Apache JAMES</name>
+                </asfExtOptions>
+                </configuration>
+                </plugin>
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Specification-Title>Apache MailetDocs Plugin</Specification-Title>
+                            <Specification-Version>${project.version}</Specification-Version>
+                            <Specification-Vendor>The Apache Software Foundation</Specification-Vendor>
+                            <Implementation-Title>Apache MailetDocs Plugin</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Implementation-Vendor>The Apache Software Foundation</Implementation-Vendor>
+                            <Implementation-Vendor-Id>org.apache</Implementation-Vendor-Id>
+                            <url>${project.url}</url>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

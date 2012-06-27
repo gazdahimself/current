@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>mailet-project</artifactId>
+        <groupId>org.apache.james</groupId>
+        <version>1-SNAPSHOT</version>
+        <relativePath>../project/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>apache-james-ai-project</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Apache James AI Mailets Project</name>
+    <description>Collects mail processors making use of artificial intelligence (AI) methods.</description>
+    <url>http://james.apache.org/mailet/ai</url>
+    <inceptionYear>2011</inceptionYear>
+
+    <!--
+
+
+        ========================================
+        Modules
+    -->
+    <modules>
+        <module>classic</module>
+    </modules>
+
+    <scm>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/james/mailet/ai/trunk/</connection>
+        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/mailet/ai/trunk/</developerConnection>
+        <url>http://svn.apache.org/viewvc/james/mailet/ai/trunk/</url>
+    </scm>
+
+    <distributionManagement>
+        <site>
+            <id>ai-website</id>
+            <url>scpexe://people.apache.org/www/james.apache.org/mailet/ai</url>
+        </site>
+    </distributionManagement>
+
+    <properties>
+        <issue.project.name>JAMESMAILAI</issue.project.name>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-mailet</artifactId>
+                <version>2.4</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-mailet-base</artifactId>
+                <version>1.1</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.geronimo.javamail</groupId>
+                <artifactId>geronimo-javamail_1.4_mail</artifactId>
+                <version>1.6</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

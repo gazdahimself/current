@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
+        <version>10</version>
+        <relativePath />
+    </parent>
+
+    <groupId>org.apache.james</groupId>
+    <artifactId>james-skin</artifactId>
+    <version>1.8-SNAPSHOT</version>
+
+    <name>Apache James Skin</name>
+    <description>The Apache James Official Maven3 Site Skin</description>
+    <url>http://james.apache.org/skin/</url>
+
+    <mailingLists>
+        <mailingList>
+            <name>James Website Development</name>
+            <subscribe>server-dev-subscribe@james.apache.org</subscribe>
+            <unsubscribe>server-dev-unsubscribe@james.apache.org</unsubscribe>
+            <post>server-dev@james.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/james-server-dev/</archive>
+        </mailingList>
+    </mailingLists>
+
+    <prerequisites>
+        <maven>3.0.2</maven>
+    </prerequisites>
+
+    <scm>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/james/skin/trunk</connection>
+        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/skin/trunk</developerConnection>
+        <url>http://svn.apache.org/viewvc/james/skin/trunk/</url>
+    </scm>
+
+    <issueManagement>
+        <system>JIRA</system>
+        <url>http://issues.apache.org/jira/browse/JAMES</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>Jenkins</system>
+        <url>https://builds.apache.org/</url>
+    </ciManagement>
+
+    <distributionManagement>
+        <site>
+            <id>james-skin-website</id>
+            <url>scpexe://people.apache.org/www/james.apache.org/skin</url>
+        </site>
+    </distributionManagement>
+
+    <build>
+        <extensions>
+            <extension>
+                <!-- Adding a Protocol to Deploy the Site (support for ssh/scp) -->
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh-external</artifactId>
+                <version>2.0</version>
+            </extension>
+        </extensions>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>.</directory>
+                <includes>
+                    <include>NOTICE</include>
+                </includes>
+                <targetPath>${project.build.outputDirectory}/META-INF</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-descriptor</id>
+                        <goals>
+                            <goal>attach-descriptor</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <reportPlugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-project-info-reports-plugin</artifactId>
+                            <version>2.4</version>
+                            <reports>
+                                <report>index</report>
+                                <report>issue-tracking</report>
+                                <report>distribution-management</report>
+                                <report>license</report>
+                                <report>mailing-list</report>
+                                <report>scm</report>
+                            </reports>
+                        </plugin>
+                    </reportPlugins>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!--
+        ! Licensed to the Apache Software Foundation (ASF) under one ! ! or
+        more contributor license agreements. See the NOTICE file ! !
+        distributed with this work for additional information ! ! regarding
+        copyright ownership. The ASF licenses this file ! ! to you under the
+        Apache License, Version 2.0 (the ! ! "License"); you may not use this
+        file except in compliance ! ! with the License. You may obtain a copy
+        of the License at ! ! ! ! http://www.apache.org/licenses/LICENSE-2.0 !
+        ! ! ! Unless required by applicable law or agreed to in writing, ! !
+        software distributed under the License is distributed on an ! ! "AS
+        IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY ! ! KIND, either
+        express or implied. See the License for the ! ! specific language
+        governing permissions and limitations ! ! under the License. !
+    -->
+
+
+<beans xmlns="http://www.springframework.org/schema/beans" 
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core" 
+       xmlns:osgix="http://www.springframework.org/schema/osgi-compendium"
+       xmlns:ctx="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+         http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd 	
+         http://www.springframework.org/schema/osgi-compendium http://www.springframework.org/schema/osgi-compendium/spring-osgi-compendium.xsd
+         http://www.springframework.org/schema/context 
+         http://www.springframework.org/schema/context/spring-context.xsd">
+
+   <!-- Configuration Admin entries so the user can overwrite them if needed -->
+   <osgix:cm-properties id="cmProps" persistent-id="org.apache.james.activemq">
+      <prop key="brokerURL">vm://james?create=false</prop>
+      <prop key="sessionCacheSize">10</prop>      
+      <prop key="baseDir">/var/store/activemq/</prop>
+      <prop key="useBlobMessages">true</prop>
+   </osgix:cm-properties>
+
+   <!-- placeholder configurer -->
+   <ctx:property-placeholder properties-ref="cmProps" />
+   
+    <!-- 
+    ===========================================================================
+       ActiveMQ Queue and Camel
+    ===========================================================================
+    -->
+          
+    <!-- 
+      James Mail Queue Factory
+     -->
+    <bean id="mailqueuefactory" class="org.apache.james.queue.activemq.ActiveMQMailQueueFactory" depends-on="broker">
+        <property name="useBlobMessages" value="${useBlobMessages}"/>
+    </bean>
+
+    <!-- 
+      ActiveMQ Broker, Connections, Blob
+     -->
+    <amq:broker useJmx="true" persistent="true" brokerName="james" dataDirectory="${baseDir}/brokers" useShutdownHook="false" schedulerSupport="false" id="broker">
+        <amq:destinationPolicy>
+            <amq:policyMap>
+                <amq:policyEntries>
+                    <!-- Support priority handling of messages -->
+                    <!-- http://activemq.apache.org/how-can-i-support-priority-queues.html -->
+                    <amq:policyEntry queue=">" prioritizedMessages="true"/>
+                </amq:policyEntries>
+            </amq:policyMap>
+        </amq:destinationPolicy>
+        <amq:managementContext>
+            <amq:managementContext createConnector="false"/>
+        </amq:managementContext>
+        <amq:persistenceAdapter>
+            <amq:amqPersistenceAdapter/>
+        </amq:persistenceAdapter>
+        <amq:plugins>
+            <amq:statisticsBrokerPlugin/>
+        </amq:plugins>
+        <amq:transportConnectors>
+            <amq:transportConnector uri="tcp://localhost:0" />
+        </amq:transportConnectors>
+    </amq:broker>
+    <amq:connectionFactory id="amqConnectionFactory" brokerURL="${brokerURL}">
+        <amq:prefetchPolicy>
+            <!-- Disable prefetch so slow consuming can not block other threads -->
+            <!-- See JAMES-1253 -->
+            <amq:prefetchPolicy queuePrefetch="0" topicPrefetch="0"/>
+        </amq:prefetchPolicy>
+        <property name="blobTransferPolicy" ref="blobTransferPolicy"/>
+    </amq:connectionFactory>
+    <bean id="blobTransferPolicy" class="org.apache.james.queue.activemq.FileSystemBlobTransferPolicy">
+        <property name="defaultUploadUrl" value="${baseDir}/blob-transfer"/>
+    </bean>
+    <bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+       <property name="targetConnectionFactory" ref="amqConnectionFactory"/>
+       <property name="sessionCacheSize" value="${sessionCacheSize}"/>
+       <property name="cacheConsumers" value="false"/>
+       <property name="cacheProducers" value="true"/>
+    </bean>
+    <bean id="jmsTransactionManager" class="org.springframework.jms.connection.JmsTransactionManager">
+        <property name="connectionFactory" ref="jmsConnectionFactory"/>
+    </bean>
+
+</beans>

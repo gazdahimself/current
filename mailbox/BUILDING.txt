@@ -1,0 +1,11 @@
+####### GENERAL BUILDING NOTES ######
+
+The primary build tool for Apache James Mailbox is maven 3.
+
+On a new checkout start by running
+$ mvn clean package
+
+This will compiled all modules
+
+For just building without running junit tests:
+$ mvn clean package -DskiTests=true

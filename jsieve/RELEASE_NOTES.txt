@@ -1,0 +1,122 @@
+                        Release Notes
+                        -------------
+
+Apache JSieve is a Java implementation of the Sieve mail filtering language defined by 
+RFC 3028. jSieve is implemented as a langauge processor that can be plugged into any
+internet mail application to add Sieve support.
+
+Comments, Questions and Issues
+------------------------------
+jSieve is a sub-project of Apache James. Please direct your comments and questions to 
+the relevant James list.
+
+To report issues, such as bugs, go to 
+http://issues.apache.org/jira/browse/JSIEVE
+As jSieve comes with a fairly extensive suite of jUnit Tests, it would be most 
+helpful for bug reports to be accompanied by an illustrative jUnit test case.
+
+Licensing and legal issues
+--------------------------
+For legal and licensing issues, please look in the legal section of
+the documentation or read the LICENSE and NOTICE files.
+
+Version 0.5
+----------- 
+
+Changes
+---------
+Sub-task
+    [JSIEVE-65] - Inherit plugin management
+Bug
+    [JSIEVE-74] - Script parsing fails when the string contains a backslash
+    [JSIEVE-75] - incorrect parsing of script containing multiple multi-line forms
+Improvement
+    [JSIEVE-67] - Improve Documentation
+    [JSIEVE-70] - Improve Validation Exceptions
+    [JSIEVE-73] - Ensure Body Extension Functions As Per Specification
+    [JSIEVE-78] - Add a Mail notification mechanism for when Sieve scripts fail
+    [JSIEVE-80] - Add the ability to advertise the available Sieve extensions
+    [JSIEVE-83] - Integrate managesieve in the current jSieve modules
+    [JSIEVE-85] - Add build-helper-maven-plugin on apache-jsieve-core pom for generated src
+    [JSIEVE-88] - Rename apache-jsieve-assembly to apache-jsieve-all
+New Feature
+    [JSIEVE-51] - Sieve-In-Xml (Full Preview)
+Task
+    [JSIEVE-61] - Split Parent And Aggregation Poms
+    [JSIEVE-62] - Review TODOs
+    [JSIEVE-64] - Improve and Standardise Build
+    [JSIEVE-89] - move to geronimo / remove oracle dependencies and licensing stuff
+    [JSIEVE-90] - Clean up build configuration, assembly, notice/license attachment, ant build
+
+Version 0.4
+----------- 
+
+Changes
+---------
+Sub-tasks Completed
+ * https://issues.apache.org/jira/browse/JSIEVE-59 -  Generify MailAdapter API
+ * https://issues.apache.org/jira/browse/JSIEVE-66 - Ensure SieveFactory is thread safe by default
+ * https://issues.apache.org/jira/browse/JSIEVE-72 - Validate Extension Comparators 
+ 
+ Bugs Fixed
+ * https://issues.apache.org/jira/browse/JSIEVE-57 - Parse failure with multi-line form when the line begins with a dot
+ 
+ Improvements Made
+ * https://issues.apache.org/jira/browse/JSIEVE-35 - Revise MailAdapter.getContent() 
+ * https://issues.apache.org/jira/browse/JSIEVE-54 - Remove Ant Build
+ * https://issues.apache.org/jira/browse/JSIEVE-55 - Remove Staging Directory
+ * https://issues.apache.org/jira/browse/JSIEVE-56 - Provide a way to determine if a keep action is implicit or explicit
+ * https://issues.apache.org/jira/browse/JSIEVE-58 - Clarify SieveFactory thread safety
+ * https://issues.apache.org/jira/browse/JSIEVE-69 - Improve Test Coverage Of Ascii Numeric Test
+ 
+ New Features Added
+ * https://issues.apache.org/jira/browse/JSIEVE-71 - Add Support For i;ascii-numeric Comparator
+ 
+ Tasks Completed
+ * https://issues.apache.org/jira/browse/JSIEVE-53 - Generify
+ * https://issues.apache.org/jira/browse/JSIEVE-63 - Switch To apache-release Profile
+ * https://issues.apache.org/jira/browse/JSIEVE-68 - Ensure Mailet is thread safe
+
+Version 0.3
+----------- 
+This release is the first to include mailet and utility modules, in addition to the core parsing
+library. The configuration API has changed significantly to replace magic singletons with POJOs
+suitable for IoC. The default configuration mechanism has been retained so though calls have
+changed, existing configurations should still be compatible.
+ 
+Utilities include node serializers to xml and sieve script. The mailet module provides Sieve
+in the James 3 codebase.
+
+Java 1.5 is now the minimum version required.
+ 
+Changes   
+-------
+Sub-tasks Completed
+ * https://issues.apache.org/jira/browse/JSIEVE-27 - Refactor ComparatorManager
+ * https://issues.apache.org/jira/browse/JSIEVE-29 - Refactor ConfigurationManager
+ * https://issues.apache.org/jira/browse/JSIEVE-32 - Refactor TestManager
+ * https://issues.apache.org/jira/browse/JSIEVE-37 - Push main source down a level
+ * https://issues.apache.org/jira/browse/JSIEVE-38 - Modular Ant Build
+ * https://issues.apache.org/jira/browse/JSIEVE-44 - Create Check Module
+ * https://issues.apache.org/jira/browse/JSIEVE-45 - Extract Reusable Ant Macros
+ * https://issues.apache.org/jira/browse/JSIEVE-46 - Unified Distribution
+ * https://issues.apache.org/jira/browse/JSIEVE-48 - Release Quality Maven Build
+    
+Bugs Fixed
+ * https://issues.apache.org/jira/browse/JSIEVE-49 - CPU spins when :matches expression 
+                                                     contains &quot;*************&quot;
+                                                     
+Improvements Made
+ * https://issues.apache.org/jira/browse/JSIEVE-47 - Access to script comments
+ * https://issues.apache.org/jira/browse/JSIEVE-52 - Check Support For Numeric Quantifiers
+    
+New Features Added
+ * https://issues.apache.org/jira/browse/JSIEVE-43 - Add API for generating a Sieve script from a parse tree 
+ * https://issues.apache.org/jira/browse/JSIEVE-50 - Sieve-In-XML (Experimental Preview)
+                
+Tasks Completed
+ * https://issues.apache.org/jira/browse/JSIEVE-16 - Singletons -> IoC
+ * https://issues.apache.org/jira/browse/JSIEVE-24 - Include build time libraries (javacc, 
+                                                     javamail, activation) in the source distribution
+ * https://issues.apache.org/jira/browse/JSIEVE-33 - Remove .junit. package name from tests.
+ * https://issues.apache.org/jira/browse/JSIEVE-34 - make jsieve a multimodule project

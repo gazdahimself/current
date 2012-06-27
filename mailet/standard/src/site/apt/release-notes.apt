@@ -1,0 +1,54 @@
+ ------
+ Release Notes
+ ------
+ Apache JAMES Project Team
+ ------
+ 2009-02-09
+ ------
+
+~~ Licensed to the Apache Software Foundation (ASF) under one
+~~ or more contributor license agreements.  See the NOTICE file
+~~ distributed with this work for additional information
+~~ regarding copyright ownership.  The ASF licenses this file
+~~ to you under the Apache License, Version 2.0 (the
+~~ "License"); you may not use this file except in compliance
+~~ with the License.  You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing,
+~~ software distributed under the License is distributed on an
+~~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+~~ KIND, either express or implied.  See the License for the
+~~ specific language governing permissions and limitations
+~~ under the License.
+
+Release Notes
+
+   Apache James Standard Mailets are a collection of general purpose
+   mail processing agents with minimal dependencies.
+   Mailets are defined by the 
+   {{{http://james.apache.org/mailet}Apache Mailet API}} (a framework
+   assisting the rapid development of email processing functionality). 
+   
+1.0
+   
+   This is the first independent release of this code. Previously 
+   it was shipped as part of the 
+   {{{http://james.apache.org/mailet}Apache James Mail Server}} 
+   (an advanced mail server). This release is not dependent on 
+   that server but can be used in any Mailet container. 
+  
+*Since James Server 2.3.1
+
+  * Upgrade to Apache Mailet API 2.4 and Apache Mailets Base 1.0
+
+  * [{{{https://issues.apache.org/jira/browse/JAMES-728}JAMES-728}}] 
+    - ClamAV and IOUtil updates to close streams/readers/writers and sockets
+   
+  * [{{{https://issues.apache.org/jira/browse/JAMES-733}JAMES-733}}]
+    - Fix javadoc 
+    
+  * [{{{https://issues.apache.org/jira/browse/JAMES-579}JAMES-579}}]
+    -  Update license headers and NOTICE to follow the latest ASF requirements
+   

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache.james</groupId>
+        <artifactId>james-project</artifactId>
+        <version>1.8</version>
+        <relativePath></relativePath>
+    </parent>
+
+    <artifactId>apache-mailet</artifactId>
+    <version>2.5-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Apache Mailet API</name>
+    <description>The Apache Mailet API is a flexible specification for mail processing agents.</description>
+    <url>http://james.apache.org/mailet/api/</url>
+    <inceptionYear>2007</inceptionYear>
+
+    <mailingLists>
+        <mailingList>
+            <name>Apache Mailet API List</name>
+            <subscribe>mailet-api-subscribe@james.apache.org</subscribe>
+            <unsubscribe>mailet-api--unsubscribe@james.apache.org</unsubscribe>
+            <post>mailet-api-@james.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/james-mailet-api/</archive>
+        </mailingList>
+    </mailingLists>
+
+    <scm>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/james/mailet/api/trunk</connection>
+        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/mailet/api/trunk</developerConnection>
+        <url>http://svn.apache.org/viewcvs.cgi/james/mailet/api/trunk/?root=Apache-SVN</url>
+    </scm>
+    <issueManagement>
+        <system>JIRA</system>
+        <url>http://issues.apache.org/jira/browse/MAILET</url>
+    </issueManagement>
+
+    <distributionManagement>
+        <site>
+            <id>mailet-website</id>
+            <url>scpexe://people.apache.org/www/james.apache.org/mailet/api/</url>
+        </site>
+    </distributionManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.9</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Specification-Title>Apache Mailet API</Specification-Title>
+                            <Specification-Version>${project.version}</Specification-Version>
+                            <Specification-Vendor>The Apache Software Foundation</Specification-Vendor>
+                            <Implementation-Title>Apache Mailet API</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Implementation-Vendor>The Apache Software Foundation</Implementation-Vendor>
+                            <Implementation-Vendor-Id>org.apache</Implementation-Vendor-Id>
+                            <url>${project.url}</url>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- Add NOTICE and LICENSE to generated JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <configuration>
+                            <resourceBundles>
+                                <resourceBundle>org.apache:apache-jar-resource-bundle:1.2</resourceBundle>
+                            </resourceBundles>
+                            <properties>
+                                <!-- <preProjectText>PRE PROCESS TEXT</preProjectText> -->
+                                <postProjectText>This file is automatically generated by dependencies declared in pom.xml</postProjectText>
+                                <addLicense>true</addLicense>
+                            </properties>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-doap-plugin</artifactId>
+                <executions>
+                <execution>
+                <id>site</id>
+                <phase>site</phase>
+                <goals>
+                <goal>generate</goal>
+                </goals>
+                </execution>
+                </executions>
+                <configuration>
+                <doapOptions>
+                <programmingLanguage>java</programmingLanguage>
+                <category>mail</category>
+                <download-page>http://james.apache.org/download.cgi</download-page>
+                </doapOptions>
+
+                <asfExtOptions>
+                <included>true</included>
+                <pmc>http://james.apache.org</pmc>
+                <name>Apache JAMES</name>
+                </asfExtOptions>
+
+                </configuration>
+                </plugin>
+            -->
+        </plugins>
+    </build>
+</project>

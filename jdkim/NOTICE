@@ -1,0 +1,13 @@
+   =========================================================================
+   ==      NOTICE file for use with the Apache License, Version 2.0,      ==
+   =========================================================================
+   
+   Apache JAMES jDKIM
+   Copyright 2009-2010 The Apache Software Foundation
+   
+   This product includes software developed at
+   The Apache Software Foundation (http://www.apache.org/).
+   
+   "main\src\test\resources\org\apache\james\jdkim\Mail-DKIM" folder
+   includes test data from the Mail-DKIM perl module licensed under
+   the Artistic License 1.0
